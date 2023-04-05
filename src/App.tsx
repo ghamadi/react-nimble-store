@@ -1,64 +1,71 @@
-import { useCallback } from 'react';
+import { ChangeEvent } from 'react';
 import { createStore } from '~/lib/create-store';
-import { useDispatch, useSelector } from '~/lib/hooks';
+import { useSelector, useDispatch } from '~/lib/hooks';
 
-interface IGlobalStore {
-  counter1: number;
-  counter2: number;
+interface Values {
+  x: number;
+  y: number;
+  z: number;
 }
 
-const CounterLabel: Record<keyof IGlobalStore, string> = {
-  counter1: 'Counter 1',
-  counter2: 'Counter 2'
-};
+const ValuesStore = createStore<Values>({ x: 0, y: 0, z: 0 });
 
-const GlobalStore = createStore({ counter1: 0, counter2: 0 });
+function ValueInput({ valueKey }: { valueKey: keyof Values }) {
+  const value = useSelector((state) => state[valueKey], ValuesStore);
+  const dispatch = useDispatch(ValuesStore);
 
-function IncrementButton({ counterKey }: { counterKey: keyof IGlobalStore }) {
-  // Use the most immediate parent
-  const counter = useSelector<IGlobalStore, number>((state) => state[counterKey]);
-  const dispatch = useDispatch<IGlobalStore>();
+  const inputChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
+    dispatch({ [valueKey]: +e.target.value });
+  };
 
-  const increment = useCallback(() => {
-    dispatch({ [counterKey]: counter + 1 });
-  }, [counter, counterKey, dispatch]);
+  const moveByOne = (direction: 'add' | 'sub') => {
+    const offset = direction === 'add' ? 1 : -1;
+    dispatch({ [valueKey]: value + offset });
+  };
 
-  return <button onClick={increment}>Increment</button>;
+  return (
+    <div>
+      <h3>Value of {valueKey}:</h3>
+      <input value={value} onChange={inputChangeHandler} />
+      <button onClick={() => moveByOne('add')}>Increment</button>
+      <button onClick={() => moveByOne('sub')}>Decrement</button>
+    </div>
+  );
 }
 
-function CountDisplay({ counterKey }: { counterKey: keyof IGlobalStore }) {
-  // explicitly pass the store to be used
-  const counter = useSelector((state) => state[counterKey], GlobalStore);
-  const text = `Value of ${CounterLabel[counterKey]}: ${counter}`;
+function DisplaySum() {
+  const x = useSelector((state) => state.x, ValuesStore);
+  const y = useSelector((state) => state.y, ValuesStore);
 
-  return <h3>{text}</h3>;
+  return <h3>The sum of `x` and `y` is: {x + y}</h3>;
+}
+
+function ConsumerThatDoesNotReact() {
+  useSelector((_state) => null, ValuesStore);
+
+  return <p>This component does not re-render despite calling the `useSelector` hook</p>;
 }
 
 export default function App() {
   return (
-    <GlobalStore.Provider>
-      <div>
-        <p>
-          The two sections below are using the same store, but each refers to a different part of it
-        </p>
-        <hr />
+    // The `Provider` does not take props besides `children`
+    <ValuesStore.Provider>
+      {/* Only renders when X changes*/}
+      <ValueInput valueKey="x" />
 
-        <h1>Counter 1</h1>
-        <div>
-          <p>The following re-renders only when counter1 updates</p>
-          <CountDisplay counterKey="counter1" />
-          <IncrementButton counterKey="counter1" />
-        </div>
-        <hr />
+      {/* Only renders when Y changes*/}
+      <ValueInput valueKey="y" />
 
-        <h1>Counter 2</h1>
-        <div>
-          <p>The following re-renders only when counter2 updates</p>
-          <CountDisplay counterKey="counter2" />
-          <IncrementButton counterKey="counter2" />
-        </div>
-        <hr />
-      </div>
-    </GlobalStore.Provider>
+      {/* Only renders when Z changes*/}
+      <ValueInput valueKey="z" />
+
+      <hr style={{ margin: '20px 0' }} />
+
+      {/* Only renders when X or Y change */}
+      <DisplaySum />
+
+      {/* Does not react to changes in the store */}
+      <ConsumerThatDoesNotReact />
+    </ValuesStore.Provider>
   );
 }
