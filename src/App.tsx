@@ -38,8 +38,8 @@ function DisplaySum() {
   const x = useSelector((state) => state.x, { store: ValuesStore });
   const y = useSelector((state) => state.y, { store: ValuesStore });
 
-  // the type of the selected value is automatically when `options.store` is provided
-  return <h3>The sum of `x` and `y` is: {x + y}</h3>;
+  // the type of the selected value is automatically inferred when `options.store` is provided
+  return <h3>The product of X & Y is: {x * y}</h3>;
 }
 
 function ConsumerThatDoesNotReact() {
