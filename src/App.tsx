@@ -11,7 +11,7 @@ interface Values {
 const ValuesStore = createStore<Values>({ x: 0, y: 0, z: 0 });
 
 function ValueInput({ valueKey }: { valueKey: keyof Values }) {
-  const value = useSelector((state) => state[valueKey], ValuesStore);
+  const value = useSelector((state) => state[valueKey], { store: ValuesStore });
   const dispatch = useDispatch(ValuesStore);
 
   const inputChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
@@ -34,14 +34,15 @@ function ValueInput({ valueKey }: { valueKey: keyof Values }) {
 }
 
 function DisplaySum() {
-  const x = useSelector((state) => state.x, ValuesStore);
-  const y = useSelector((state) => state.y, ValuesStore);
+  // When options.store is omitted, `useSelector` will use the closest parent Store.Provider
+  const x = useSelector<Values, number>((state) => state.x);
+  const y = useSelector<Values, number>((state) => state.y);
 
   return <h3>The sum of `x` and `y` is: {x + y}</h3>;
 }
 
 function ConsumerThatDoesNotReact() {
-  useSelector((_state) => null, ValuesStore);
+  useSelector((_state) => null);
 
   return <p>This component does not re-render despite calling the `useSelector` hook</p>;
 }

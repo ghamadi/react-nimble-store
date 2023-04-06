@@ -1,8 +1,13 @@
-import { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, useCallback } from 'react';
 import { Store } from '~/lib/create-store';
 import { StoreContext, storeManager } from '~/lib/store-manager';
 
-type StateSelector<T extends object, E = unknown> = (state: T) => E;
+type StateSelector<T extends object, E> = (state: T) => E;
+
+type SelectorOptions<T extends object, E> = {
+  store?: Store<T>;
+  predicate?: (arg1: E, arg2: E) => boolean;
+};
 
 /**
  * A hook that subscribes to changes in the closest parent store and returns a selected state value.
@@ -14,10 +19,10 @@ type StateSelector<T extends object, E = unknown> = (state: T) => E;
  */
 export function useSelector<T extends object, E = unknown>(
   selector: StateSelector<T, E>,
-  store?: Store<T>
+  options?: SelectorOptions<T, E>
 ) {
-  const storeContext = store
-    ? (storeManager.contextsMap[store.id] as StoreContext<T>)
+  const storeContext = options?.store
+    ? (storeManager.contextsMap[options.store.id] as StoreContext<T>)
     : (storeManager.lastContext as StoreContext<T>);
 
   if (!storeContext) {
@@ -31,14 +36,23 @@ export function useSelector<T extends object, E = unknown>(
     throw new Error('useStore must be used within a Store.Provider');
   }
 
+  const predicate = options?.predicate;
+  const equals = useCallback(
+    (arg1: E, arg2: E) => predicate?.(arg1, arg2) ?? arg1 === arg2,
+    [predicate]
+  );
+
   const { getState, subscribe } = storeContextValue;
   const [selectedState, setSelectedState] = useState(selector(getState()));
 
   useEffect(() => {
     return subscribe(() => {
-      setSelectedState(selector(getState()));
+      const newValue = selector(getState());
+      if (!equals(newValue, selectedState)) {
+        setSelectedState(selector(getState()));
+      }
     });
-  }, [selector, getState, subscribe]);
+  }, [selector, getState, subscribe, equals, selectedState]);
 
   return selectedState;
 }
