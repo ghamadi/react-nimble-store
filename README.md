@@ -33,7 +33,7 @@ interface Values {
 const ValuesStore = createStore<Values>({ x: 0, y: 0, z: 0 });
 
 function ValueInput({ valueKey }: { valueKey: keyof Values }) {
-  const value = useSelector((state) => state[valueKey], ValuesStore);
+  const value = useSelector<Values, number>((state) => state[valueKey]);
   const dispatch = useDispatch(ValuesStore);
 
   const inputChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
@@ -56,14 +56,16 @@ function ValueInput({ valueKey }: { valueKey: keyof Values }) {
 }
 
 function DisplaySum() {
-  const x = useSelector((state) => state.x, ValuesStore);
-  const y = useSelector((state) => state.y, ValuesStore);
+  // you can also dictate the store that `useSelector` looks in
+  const x = useSelector((state) => state.x, { store: ValuesStore });
+  const y = useSelector((state) => state.y, { store: ValuesStore });
 
-  return <h3>The sum of `x` and `y` is: {x + y}</h3>;
+  // the type of the selected value is automatically inferred when `options.store` is provided
+  return <h3>The product of X & Y is: {x * y}</h3>;
 }
 
 function ConsumerThatDoesNotReact() {
-  useSelector((_state) => null, ValuesStore);
+  useSelector((_state) => null);
 
   return <p>This component does not re-render despite calling the `useSelector` hook</p>;
 }
