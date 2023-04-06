@@ -11,7 +11,7 @@ interface Values {
 const ValuesStore = createStore<Values>({ x: 0, y: 0, z: 0 });
 
 function ValueInput({ valueKey }: { valueKey: keyof Values }) {
-  const value = useSelector((state) => state[valueKey], { store: ValuesStore });
+  const value = useSelector<Values, number>((state) => state[valueKey]);
   const dispatch = useDispatch(ValuesStore);
 
   const inputChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
@@ -34,10 +34,11 @@ function ValueInput({ valueKey }: { valueKey: keyof Values }) {
 }
 
 function DisplaySum() {
-  // When options.store is omitted, `useSelector` will use the closest parent Store.Provider
-  const x = useSelector<Values, number>((state) => state.x);
-  const y = useSelector<Values, number>((state) => state.y);
+  // you can also dictate the store that `useSelector` looks in
+  const x = useSelector((state) => state.x, { store: ValuesStore });
+  const y = useSelector((state) => state.y, { store: ValuesStore });
 
+  // the type of the selected value is automatically when `options.store` is provided
   return <h3>The sum of `x` and `y` is: {x + y}</h3>;
 }
 
