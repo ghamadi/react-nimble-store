@@ -1,8 +1,9 @@
 import { Context as ReactContext } from 'react';
+type Exactly<T, U> = T & Record<Exclude<keyof U, keyof T>, T[keyof T]>;
 
 export type StoreContextValue<T extends object> = {
   getState(): T;
-  updateState(value: Partial<T>): void;
+  updateState<E extends Exactly<Partial<T>, E>>(value: E): void;
   subscribe(callback: () => void): () => void;
 };
 
