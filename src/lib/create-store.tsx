@@ -8,6 +8,7 @@ import {
   useEffect
 } from 'react';
 
+// A utility type to return the partial of a type without allowing extra properties
 type Exactly<T, P> = T & Record<Exclude<keyof P, keyof T>, T[keyof T]>;
 
 type StoreContextValue<T, A> = {
@@ -83,8 +84,9 @@ export function createStore<T, A>(
   }
 
   /**
+   * Hook to provide the set of actions provided in the store that can trigger state change
    *
-   * @returns the store's _actions_ object
+   * @returns the store's `actions` object
    */
   function useActions() {
     const contextValue = useContextValue('useActions');
