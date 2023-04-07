@@ -1,14 +1,24 @@
-import { createContext, ReactNode, useRef, useCallback } from 'react';
-import { Store } from '~/lib/models/store';
-import { storeManager } from '~/lib/models/store-manager';
 import {
-  StoreContextValue,
-  StoreContext,
-  StateSetter,
-  StateSetterArg,
-  StoreActionsBuilder,
-  StoreActions
-} from '~/lib/types';
+  createContext,
+  ReactNode,
+  useRef,
+  useCallback,
+  useContext,
+  useState,
+  useEffect
+} from 'react';
+
+type Exactly<T, P> = T & Record<Exclude<keyof P, keyof T>, T[keyof T]>;
+
+type StoreContextValue<T, A> = {
+  getState: () => T;
+  getActions: () => A;
+  subscribe: (callback: () => void) => () => void;
+};
+
+type StateSetter<T> = (arg: StateSetterArg<T>) => void;
+type StateSetterArg<T> = StateSetterCallback<T> | Exactly<T, Partial<T>>;
+type StateSetterCallback<T> = (state: T) => T;
 
 /**
  * Creates a Store object for managing state in a React application.
@@ -19,27 +29,16 @@ import {
  * @param state - The initial state of the store.
  * @returns An object containing the context and provider for the store.
  */
-export function createStore<T, S extends string>(
-  state: T,
-  actions: StoreActionsBuilder<T, S>
-): Store<T> {
-  const storeId = storeManager.mapSize + 1;
-  const Context = createContext<StoreContextValue<T, S> | undefined>(undefined);
+export function createStore<T, A>(state: T, actions: (setState: StateSetter<T>) => A) {
+  const Context = createContext<StoreContextValue<T, A> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
 
-  const Provider = (props: { children: ReactNode }) => {
-    // register the context when the provider runs
-    storeManager.registerContext(storeId, Context as StoreContext);
-
+  function Provider(props: { children: ReactNode }) {
     // Returns the current version of the state
-    const getState = useCallback(() => {
-      return stateRef.current;
-    }, []);
+    const getState = useCallback(() => stateRef.current, []);
 
     // Returns the current version of the actions
-    const getActions = useCallback(() => {
-      return actionsRef.current as StoreActions<S>;
-    }, []);
+    const getActions = useCallback(() => actionsRef.current as A, []);
 
     // Used by `useSelector` to pass a callback that triggers a state change in the hook
     const subscribe = useCallback((callback: () => void) => {
@@ -62,20 +61,62 @@ export function createStore<T, S extends string>(
       subscribers.forEach((callback) => callback());
     }, []);
 
-    /*******************************
-     * INITIALIZE THE CONTEXT VALUE
-     *******************************/
+    // Initialize the context value passed to the provider
     const stateRef = useRef(state);
     const actionsRef = useRef(actions(setState));
-
-    const contextValue: StoreContextValue<T, S> = {
+    const contextValue: StoreContextValue<T, A> = {
       getState,
       getActions,
       subscribe
     };
 
     return <Context.Provider value={contextValue}>{props.children}</Context.Provider>;
-  };
+  }
 
-  return new Store({ id: storeId, state, Provider });
+  function useActions() {
+    const contextValue = useContextValue('useActions');
+    return contextValue.getActions();
+  }
+
+  function useStore<R>(selector?: (state: T) => R, predicate?: (arg1: R, arg2: R) => boolean) {
+    const selectorFn = useCallback(
+      (state: T) => (selector ? selector(state) : (state as unknown as R)),
+      [selector]
+    );
+
+    // Defaults to === if predicate is undefined.
+    const equalityChecker = useCallback(
+      (arg1: R, arg2: R) => (predicate ? predicate(arg1, arg2) : arg1 === arg2),
+      [predicate]
+    );
+
+    const contextValue = useContextValue('useStore');
+    const { getState, subscribe } = contextValue;
+    const [selectedState, setSelectedState] = useState(selectorFn(getState()));
+
+    useEffect(() => {
+      return subscribe(() => {
+        const newValue = selectorFn(getState());
+        if (!equalityChecker(newValue, selectedState)) {
+          setSelectedState(newValue);
+        }
+      });
+    }, [equalityChecker, getState, selectedState, selectorFn, subscribe]);
+
+    return selectedState;
+  }
+
+  function useContextValue(hookName: string) {
+    const contextValue = useContext(Context);
+    if (!contextValue) {
+      throw new Error(`${hookName} must be used within a Store.Provider`);
+    }
+    return contextValue;
+  }
+
+  return {
+    Provider,
+    useActions,
+    useStore
+  };
 }

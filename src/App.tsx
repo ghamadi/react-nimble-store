@@ -1,39 +1,28 @@
 import { ChangeEvent } from 'react';
 import { createStore } from '~/lib/create-store';
-import { useActions, useStore } from '~/lib/hooks';
 
-interface ICounters {
-  x: number;
-  y: number;
-  z: number;
-}
+const CountersState = { x: 0, y: 0, z: 0 };
 
-type ICountersActions = {
-  increment(key: keyof ICounters): void;
-  decrement(key: keyof ICounters): void;
-  set(key: keyof ICounters, value: ICounters[keyof ICounters]): void;
-};
-
-const CountersState: ICounters = { x: 0, y: 0, z: 0 };
+type K = keyof typeof CountersState;
 
 const CountersStore = createStore(CountersState, (setState) => ({
-  increment(key: keyof ICounters) {
+  increment(key: K) {
     setState((state) => ({ ...state, [key]: state[key] + 1 }));
   },
 
-  decrement(key: keyof ICounters) {
+  decrement(key: K) {
     setState((state) => ({ ...state, [key]: state[key] - 1 }));
   },
 
-  set(key: keyof ICounters, value: ICounters[keyof ICounters]) {
+  set(key: K, value: (typeof CountersState)[K]) {
     setState((state) => ({ ...state, [key]: value }));
   }
 }));
 
-function CounterInput({ counterKey }: { counterKey: keyof ICounters }) {
-  const value = useStore(CountersStore, { selector: (state) => state[counterKey] });
-
-  const { increment, decrement, set } = useActions<ICountersActions>(CountersStore);
+function CounterInput({ counterKey }: { counterKey: K }) {
+  const { useStore, useActions } = CountersStore;
+  const value = useStore((state) => state[counterKey]);
+  const { increment, decrement, set } = useActions();
 
   const inputChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
     set(counterKey, +e.target.value);
@@ -50,17 +39,19 @@ function CounterInput({ counterKey }: { counterKey: keyof ICounters }) {
 }
 
 function DisplaySum() {
-  const { x, y } = useStore(CountersStore, {
-    selector: ({ x, y }) => ({ x, y }),
-    predicate: (arg1, arg2) => JSON.stringify(arg1) === JSON.stringify(arg2)
-  });
+  const { useStore } = CountersStore;
+  const { x, y } = useStore(
+    ({ x, y }) => ({ x, y }),
+    // equality checker
+    (arg1, arg2) => JSON.stringify(arg1) === JSON.stringify(arg2)
+  );
 
   // the type of the selected value is automatically inferred when `options.store` is provided
   return <h3>The product of X & Y is: {x * y}</h3>;
 }
 
 function ConsumerThatDoesNotReact() {
-  useStore(CountersStore, { selector: (_state) => null });
+  CountersStore.useStore((_state) => null);
 
   return <p>This component does not re-render despite calling the `useStore` hook</p>;
 }
