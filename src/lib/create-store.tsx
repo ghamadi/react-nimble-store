@@ -85,18 +85,30 @@ export function createStore<T, A>(
     return <Context.Provider value={contextValue}>{props.children}</Context.Provider>;
   }
 
+  /**
+   *
+   * @returns the store's _actions_ object
+   */
   function useActions() {
     const contextValue = useContextValue('useActions');
     return contextValue.getActions();
   }
 
+  /**
+   * Hook to return any value from the store's `state` object. The output can be any data of any type.
+   *
+   * @param selector  - A callback to return data from the store
+   * @param predicate - An equality checker callback to provider custom comparison logic when "===" is not enough
+   * @returns data from the `state` of the closest parent provider
+   */
   function useStore<R>(selector?: (state: T) => R, predicate?: (arg1: R, arg2: R) => boolean) {
+    // Rentires the entire state object if `selector` is undefined
     const selectorFn = useCallback(
       (state: T) => (selector ? selector(state) : (state as unknown as R)),
       [selector]
     );
 
-    // Defaults to === if predicate is undefined.
+    // Defaults to "===" if `predicate` is undefined.
     const equalityChecker = useCallback(
       (arg1: R, arg2: R) => (predicate ? predicate(arg1, arg2) : arg1 === arg2),
       [predicate]
@@ -118,6 +130,13 @@ export function createStore<T, A>(
     return selectedState;
   }
 
+  /**
+   * Internal hook used for validating a Provider parent exists
+   *
+   * @param hookName - The name of the calling hook. Used in the error message to help debugging.
+   * @returns the output of `useContext` assuming a `Provider` exists as a parent
+   * @throws an error if the `useContext` returns undefined
+   */
   function useContextValue(hookName: string) {
     const contextValue = useContext(Context);
     if (!contextValue) {
