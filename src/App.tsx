@@ -50,8 +50,10 @@ function CounterInput({ counterKey }: { counterKey: keyof ICounters }) {
 }
 
 function DisplaySum() {
-  const x = useStore(CountersStore, { selector: (state) => state.x });
-  const y = useStore(CountersStore, { selector: (state) => state.y });
+  const { x, y } = useStore(CountersStore, {
+    selector: ({ x, y }) => ({ x, y }),
+    predicate: (arg1, arg2) => JSON.stringify(arg1) === JSON.stringify(arg2)
+  });
 
   // the type of the selected value is automatically inferred when `options.store` is provided
   return <h3>The product of X & Y is: {x * y}</h3>;
