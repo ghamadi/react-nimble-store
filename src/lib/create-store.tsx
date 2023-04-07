@@ -56,16 +56,16 @@ export function createStore<T, A>(
     }, []);
 
     // The callback used by `actions` to trigger a state change
-    const setState: StateSetter<T> = useCallback((arg: StateSetterArg<T>) => {
-      switch (typeof arg) {
+    const setState: StateSetter<T> = useCallback((input) => {
+      switch (typeof input) {
         case 'function':
-          stateRef.current = structuredClone(arg(stateRef.current));
+          stateRef.current = structuredClone(input(stateRef.current));
           break;
         case 'object':
-          stateRef.current = structuredClone({ ...stateRef.current, ...arg });
+          stateRef.current = structuredClone({ ...stateRef.current, ...input });
           break;
         default:
-          stateRef.current = structuredClone(arg);
+          stateRef.current = structuredClone(input);
       }
       subscribers.forEach((callback) => callback());
     }, []);
