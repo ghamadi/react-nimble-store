@@ -8,12 +8,6 @@ interface ICounters {
   z: number;
 }
 
-// interface ICountersActions extends StoreActions<'increment' | 'decrement' | 'set'> {
-//   increment(key: keyof ICounters): void;
-//   decrement(key: keyof ICounters): void;
-//   set(key: keyof ICounters, value: ICounters[keyof ICounters]): void;
-// }
-
 const CountersState: ICounters = { x: 0, y: 0, z: 0 };
 
 const CountersStore = createStore(CountersState, (setState) => ({
