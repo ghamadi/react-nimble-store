@@ -3,6 +3,9 @@ import { SelectorOptions, StoreContext } from '~/lib/types';
 import { storeManager } from '~/lib/models/store-manager';
 import { useContext, useState, useEffect, useCallback } from 'react';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Actions = Record<string, (...args: any) => void>;
+
 /**
  * A hook that returns a given store's state.
  *
@@ -35,9 +38,6 @@ export function useStore<T, E>(store: Store<T>, options?: SelectorOptions<T, E>)
   useEffect(() => {
     return subscribe(() => {
       const newValue = selector(getState());
-      if (!newValue) {
-        console.log({ newValue, selectedState });
-      }
       if (!areEqual(newValue, selectedState)) {
         setSelectedState(newValue);
       }
@@ -48,15 +48,19 @@ export function useStore<T, E>(store: Store<T>, options?: SelectorOptions<T, E>)
 }
 
 /**
+ * TODO: Improve the typing for the returned actions. I need a way to have the action
+ * properties inferred by TS based on the passed Store (without needing the explicit generic A)
+ * This will probably require refactoring the types starting at `createStore`
+ *
  * A hook that returns the dispatch function of a store.
  *
  * @param store - The store whose actions are needed
  * @returns An object of functions that update the store's
  */
-export function useActions<T = object>(store: Store<T>) {
+export function useActions<A extends Actions, T = object>(store: Store<T>) {
   const storeContextValue = useContextValue(store, 'useActions');
 
-  return storeContextValue.getActions();
+  return storeContextValue.getActions() as A;
 }
 
 /**

@@ -8,6 +8,12 @@ interface ICounters {
   z: number;
 }
 
+type ICountersActions = {
+  increment(key: keyof ICounters): void;
+  decrement(key: keyof ICounters): void;
+  set(key: keyof ICounters, value: ICounters[keyof ICounters]): void;
+};
+
 const CountersState: ICounters = { x: 0, y: 0, z: 0 };
 
 const CountersStore = createStore(CountersState, (setState) => ({
@@ -27,7 +33,7 @@ const CountersStore = createStore(CountersState, (setState) => ({
 function CounterInput({ counterKey }: { counterKey: keyof ICounters }) {
   const value = useStore(CountersStore, { selector: (state) => state[counterKey] });
 
-  const { increment, decrement, set } = useActions(CountersStore);
+  const { increment, decrement, set } = useActions<ICountersActions>(CountersStore);
 
   const inputChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
     set(counterKey, +e.target.value);

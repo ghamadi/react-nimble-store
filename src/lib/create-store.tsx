@@ -77,5 +77,5 @@ export function createStore<T, S extends string>(
     return <Context.Provider value={contextValue}>{props.children}</Context.Provider>;
   };
 
-  return new Store({ id: storeId, Context, Provider });
+  return new Store({ id: storeId, state, Provider });
 }
