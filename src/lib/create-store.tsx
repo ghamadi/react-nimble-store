@@ -47,7 +47,7 @@ export function createStore<T, A>(
     const getState = useCallback(() => stateRef.current, []);
 
     // Returns the current version of the actions
-    const getActions = useCallback(() => actionsRef.current as A, []);
+    const getActions = useCallback(() => actionsRef.current, []);
 
     // Used by `useSelector` to pass a callback that triggers a state change in the hook
     const subscribe = useCallback((callback: () => void) => {
@@ -72,7 +72,7 @@ export function createStore<T, A>(
 
     // Initialize the context value passed to the provider
     const stateRef = useRef(state);
-    const actionsRef = useRef(actions?.(setState));
+    const actionsRef = useRef(actions?.(setState) ?? ({} as A));
     const contextValue: StoreContextValue<T, A> = {
       getState,
       getActions,
