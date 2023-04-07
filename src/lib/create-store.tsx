@@ -1,21 +1,14 @@
-import { createContext, ReactNode, useRef, useCallback, useMemo } from 'react';
-import { storeManager, StoreContextValue, StoreContext } from '~/lib/store-manager';
-
-type StoreParams<T extends object> = {
-  id: number;
-  Context: StoreContext<T>;
-  Provider: (props: { children: ReactNode }) => JSX.Element;
-};
-
-class Store<T extends object> {
-  readonly id: number;
-  readonly Provider: (props: { children: ReactNode }) => JSX.Element;
-
-  constructor({ id, Provider }: StoreParams<T>) {
-    this.id = id;
-    this.Provider = Provider;
-  }
-}
+import { createContext, ReactNode, useRef, useCallback } from 'react';
+import { Store } from '~/lib/models/store';
+import { storeManager } from '~/lib/models/store-manager';
+import {
+  StoreContextValue,
+  StoreContext,
+  StateSetter,
+  StateSetterArg,
+  StoreActionsBuilder,
+  StoreActions
+} from '~/lib/types';
 
 /**
  * Creates a Store object for managing state in a React application.
@@ -26,7 +19,10 @@ class Store<T extends object> {
  * @param state - The initial state of the store.
  * @returns An object containing the context and provider for the store.
  */
-export function createStore<T extends object>(state: T): Store<T> {
+export function createStore<T, S extends string>(
+  state: T,
+  actions: StoreActionsBuilder<T, S>
+): Store<T> {
   const storeId = storeManager.mapSize + 1;
   const Context = createContext<StoreContextValue<T> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
@@ -35,34 +31,51 @@ export function createStore<T extends object>(state: T): Store<T> {
     // register the context when the provider runs
     storeManager.registerContext(storeId, Context as StoreContext);
 
-    const stateRef = useRef(state);
-
+    // Returns the current version of the state
     const getState = useCallback(() => {
       return stateRef.current;
     }, []);
 
-    const updateState = useCallback((value: Partial<T>) => {
-      stateRef.current = { ...stateRef.current, ...value } as T;
-      subscribers.forEach((callback) => callback());
+    // Returns the current version of the actions
+    const getActions = useCallback(() => {
+      return actionsRef.current as StoreActions<S>;
     }, []);
 
+    // Used by `useSelector` to pass a callback that triggers a state change in the hook
     const subscribe = useCallback((callback: () => void) => {
       subscribers.add(callback);
       return () => subscribers.delete(callback);
     }, []);
 
-    const contextValue = useMemo(() => {
-      return {
-        getState,
-        updateState,
-        subscribe
-      };
-    }, [getState, subscribe, updateState]);
+    // The callback used by `actions` to trigger a state change
+    const setState: StateSetter<T> = useCallback((arg: StateSetterArg<T>) => {
+      switch (typeof arg) {
+        case 'function':
+          stateRef.current = structuredClone(arg(stateRef.current));
+          break;
+        case 'object':
+          stateRef.current = structuredClone({ ...stateRef.current, ...arg });
+          break;
+        default:
+          stateRef.current = structuredClone(arg);
+      }
+      subscribers.forEach((callback) => callback());
+    }, []);
+
+    /*******************************
+     * INITIALIZE THE CONTEXT VALUE
+     *******************************/
+    const stateRef = useRef(state);
+    const actionsRef = useRef(actions(setState));
+
+    const contextValue: StoreContextValue<T> = {
+      getState,
+      getActions,
+      subscribe
+    };
 
     return <Context.Provider value={contextValue}>{props.children}</Context.Provider>;
   };
 
   return new Store({ id: storeId, Context, Provider });
 }
-
-export type { Store };

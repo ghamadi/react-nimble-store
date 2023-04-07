@@ -1,15 +1,4 @@
-import { Context as ReactContext } from 'react';
-type Exactly<T, U> = T & Record<Exclude<keyof U, keyof T>, T[keyof T]>;
-
-export type StoreContextValue<T extends object> = {
-  getState(): T;
-  updateState<E extends Exactly<Partial<T>, E>>(value: E): void;
-  subscribe(callback: () => void): () => void;
-};
-
-export type StoreContext<T extends object = object> = ReactContext<
-  StoreContextValue<T> | undefined
->;
+import { StoreContext } from '~/lib/types';
 
 class StoreManager {
   private lastId: number | null = null;
