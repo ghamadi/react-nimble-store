@@ -23,10 +23,7 @@ type StateSetterCallback<T> = (state: T) => T;
 export type Store<T, A> = {
   Provider: (props: { children: ReactNode }) => JSX.Element;
   useActions: () => A;
-  useStore: <R>(
-    selector?: ((state: T) => R) | undefined,
-    predicate?: ((arg1: R, arg2: R) => boolean) | undefined
-  ) => R;
+  useStore: <R>(selector?: (state: T) => R, predicate?: (arg1: R, arg2: R) => boolean) => R;
 };
 
 /**
