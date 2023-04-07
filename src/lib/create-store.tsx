@@ -20,6 +20,15 @@ type StateSetter<T> = (arg: StateSetterArg<T>) => void;
 type StateSetterArg<T> = StateSetterCallback<T> | Exactly<T, Partial<T>>;
 type StateSetterCallback<T> = (state: T) => T;
 
+export type Store<T, A> = {
+  Provider: (props: { children: ReactNode }) => JSX.Element;
+  useActions: () => A;
+  useStore: <R>(
+    selector?: ((state: T) => R) | undefined,
+    predicate?: ((arg1: R, arg2: R) => boolean) | undefined
+  ) => R;
+};
+
 /**
  * Creates a Store object for managing state in a React application.
  *
@@ -29,7 +38,10 @@ type StateSetterCallback<T> = (state: T) => T;
  * @param state - The initial state of the store.
  * @returns An object containing the context and provider for the store.
  */
-export function createStore<T, A>(state: T, actions: (setState: StateSetter<T>) => A) {
+export function createStore<T, A>(
+  state: T,
+  actions?: (setState: StateSetter<T>) => A
+): Store<T, A> {
   const Context = createContext<StoreContextValue<T, A> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
 
@@ -63,7 +75,7 @@ export function createStore<T, A>(state: T, actions: (setState: StateSetter<T>) 
 
     // Initialize the context value passed to the provider
     const stateRef = useRef(state);
-    const actionsRef = useRef(actions(setState));
+    const actionsRef = useRef(actions?.(setState));
     const contextValue: StoreContextValue<T, A> = {
       getState,
       getActions,
