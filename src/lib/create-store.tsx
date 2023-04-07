@@ -21,6 +21,9 @@ type StateSetter<T> = (arg: StateSetterArg<T>) => void;
 type StateSetterArg<T> = StateSetterCallback<T> | Exactly<T, Partial<T>>;
 type StateSetterCallback<T> = (state: T) => T;
 
+type Selector<T, R> = (state: T) => R;
+type Predicate<T> = (arg1: T, arg2: T) => boolean;
+
 export type Store<T, A> = {
   Provider: (props: { children: ReactNode }) => JSX.Element;
   useActions: () => A;
@@ -30,11 +33,11 @@ export type Store<T, A> = {
 /**
  * Creates a Store object for managing state in a React application.
  *
- * The returned `Store` exposes a `Provider` component — a wrapper for `Context.Provider` that's
- * setup to efficiently trigger the children's re-rendering where needed only.
+ * The returned `Store` exposes a `Provider` component — a wrapper for `Context.Provider`, and
+ * consuming hooks setup to efficiently trigger the consumer components' re-rendering where needed only.
  *
  * @param state - The initial state of the store.
- * @returns An object containing the context and provider for the store.
+ * @returns A `Store` object
  */
 export function createStore<T, A>(
   state: T,
@@ -100,16 +103,16 @@ export function createStore<T, A>(
    * @param predicate - An equality checker callback to provider custom comparison logic when "===" is not enough
    * @returns data from the `state` of the closest parent provider
    */
-  function useStore<R>(selector?: (state: T) => R, predicate?: (arg1: R, arg2: R) => boolean) {
+  function useStore<R>(selector?: Selector<T, R>, predicate?: Predicate<R>) {
     // Rentires the entire state object if `selector` is undefined
-    const selectorFn = useCallback(
-      (state: T) => (selector ? selector(state) : (state as unknown as R)),
+    const selectorFn: Selector<T, R> = useCallback(
+      (state) => (selector ? selector(state) : (state as unknown as R)),
       [selector]
     );
 
     // Defaults to "===" if `predicate` is undefined.
-    const equalityChecker = useCallback(
-      (arg1: R, arg2: R) => (predicate ? predicate(arg1, arg2) : arg1 === arg2),
+    const equalityChecker: Predicate<R> = useCallback(
+      (arg1, arg2) => (predicate ? predicate(arg1, arg2) : arg1 === arg2),
       [predicate]
     );
 
