@@ -24,7 +24,7 @@ export function createStore<T, S extends string>(
   actions: StoreActionsBuilder<T, S>
 ): Store<T> {
   const storeId = storeManager.mapSize + 1;
-  const Context = createContext<StoreContextValue<T> | undefined>(undefined);
+  const Context = createContext<StoreContextValue<T, S> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
 
   const Provider = (props: { children: ReactNode }) => {
@@ -68,7 +68,7 @@ export function createStore<T, S extends string>(
     const stateRef = useRef(state);
     const actionsRef = useRef(actions(setState));
 
-    const contextValue: StoreContextValue<T> = {
+    const contextValue: StoreContextValue<T, S> = {
       getState,
       getActions,
       subscribe
