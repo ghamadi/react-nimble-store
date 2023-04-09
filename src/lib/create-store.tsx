@@ -24,8 +24,18 @@ type StateSetterCallback<T> = (state: T) => T;
 type Selector<T, R> = (state: T) => R;
 type Predicate<T> = (arg1: T, arg2: T) => boolean;
 
+type ActionsBuilder<T, A> = (setState: StateSetter<T>) => A;
+
+type ProviderProps<T, A> = {
+  children: ReactNode;
+  value?: {
+    state: T;
+    actions?: ActionsBuilder<T, A>;
+  };
+};
+
 export type Store<T, A> = {
-  Provider: (props: { children: ReactNode }) => JSX.Element;
+  Provider: (props: ProviderProps<T, A>) => JSX.Element;
   useActions: () => A;
   useStore: <R>(selector?: (state: T) => R, predicate?: (arg1: R, arg2: R) => boolean) => R;
 };
@@ -39,14 +49,11 @@ export type Store<T, A> = {
  * @param state - The initial state of the store.
  * @returns A `Store` object
  */
-export function createStore<T, A>(
-  state: T,
-  actions?: (setState: StateSetter<T>) => A
-): Store<T, A> {
+export function createStore<T, A>(state: T, actions?: ActionsBuilder<T, A>): Store<T, A> {
   const Context = createContext<StoreContextValue<T, A> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
 
-  function Provider(props: { children: ReactNode }) {
+  function Provider(props: ProviderProps<T, A>) {
     // Returns the current version of the state
     const getState = useCallback(() => stateRef.current, []);
 
@@ -75,8 +82,8 @@ export function createStore<T, A>(
     }, []);
 
     // Initialize the context value passed to the provider
-    const stateRef = useRef(state);
-    const actionsRef = useRef(actions?.(setState) ?? ({} as A));
+    const stateRef = useRef(props.value?.state ?? state);
+    const actionsRef = useRef((props.value?.actions ?? actions)?.(setState) ?? ({} as A));
     const contextValue: StoreContextValue<T, A> = {
       getState,
       getActions,
