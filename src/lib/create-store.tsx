@@ -25,7 +25,7 @@ type Predicate<T> = (arg1: T, arg2: T) => boolean;
 
 type ProviderProps<T> = {
   children: ReactNode;
-  value?: StateBuilder<T> | T;
+  value?: StateBuilder<T>;
 };
 
 export type Store<T> = {
@@ -42,7 +42,7 @@ export type Store<T> = {
  * @param stateBuilder - The callback used to setup the store
  * @returns A `Store` object
  */
-export function createStore<T>(stateBuilder: StateBuilder<T> | T): Store<T> {
+export function createStore<T>(stateBuilder: StateBuilder<T>): Store<T> {
   const Context = createContext<StoreContextValue<T> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
 
@@ -71,12 +71,7 @@ export function createStore<T>(stateBuilder: StateBuilder<T> | T): Store<T> {
       subscribers.forEach((callback) => callback());
     }, []);
 
-    // stateBuilder is either the callback expecting `setState` or just a value
-    let initialState = props.value ?? stateBuilder;
-    if (typeof initialState === 'function') {
-      initialState = (initialState as StateBuilder<T>)(setState);
-    }
-
+    const initialState = (props.value ?? stateBuilder)(setState);
     const stateRef = useRef(initialState);
     const contextValue: StoreContextValue<T> = { getState, subscribe };
 
