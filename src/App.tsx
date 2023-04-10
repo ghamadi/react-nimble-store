@@ -2,11 +2,20 @@ import { ChangeEvent } from 'react';
 import NestedProvidersExample from '~/examples/nested-providers';
 import { createStore } from '~/lib/create-store';
 
-const CountersState = { x: 0, y: 0, z: 0 };
+type K = 'x' | 'y' | 'z';
+interface CountersState {
+  x: number;
+  y: number;
+  z: number;
+  increment: (key: K) => void;
+  decrement: (key: K) => void;
+  set: (key: K, val: number) => void;
+}
 
-type K = keyof typeof CountersState;
-
-const CountersStore = createStore(CountersState, (setState) => ({
+const CountersStore = createStore<CountersState>((setState) => ({
+  x: 0,
+  y: 0,
+  z: 0,
   increment(key: K) {
     setState((state) => ({ ...state, [key]: state[key] + 1 }));
   },
@@ -15,15 +24,17 @@ const CountersStore = createStore(CountersState, (setState) => ({
     setState((state) => ({ ...state, [key]: state[key] - 1 }));
   },
 
-  set(key: K, value: (typeof CountersState)[K]) {
+  set(key: K, value: CountersState[K]) {
     setState((state) => ({ ...state, [key]: value }));
   }
 }));
 
 function CounterInput({ counterKey }: { counterKey: K }) {
-  const { useStore, useActions } = CountersStore;
+  const { useStore } = CountersStore;
   const value = useStore((state) => state[counterKey]);
-  const { increment, decrement, set } = useActions();
+  const increment = useStore((state) => state.increment);
+  const decrement = useStore((state) => state.decrement);
+  const set = useStore((state) => state.set);
 
   const inputChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
     set(counterKey, +e.target.value);

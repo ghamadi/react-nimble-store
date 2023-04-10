@@ -7,13 +7,13 @@ interface Store {
   setCount: (value: number) => void;
 }
 
-const CounterStore = createStore<Store>({
+const CounterStore = createStore<Store>((setState) => ({
   count: 0,
   step: 1,
   setCount(value: number) {
-    console.log(value);
+    setState({ count: value });
   }
-});
+}));
 
 function Slider() {
   const step = CounterStore.useStore((state) => state.step);
@@ -61,14 +61,17 @@ export default function NestedProvidersExample() {
 }
 
 function NestedSlider() {
-  const setCount = CounterStore.useStore((state) => state.setCount);
+  const state = CounterStore.useStore() as Store;
+  console.log({ state });
   return (
     <CounterStore.Provider
-      value={{
-        setCount,
+      value={(_setState) => ({
+        setCount() {
+          console.log('');
+        },
         count: 1,
         step: 5
-      }}
+      })}
     >
       <Slider />
     </CounterStore.Provider>
