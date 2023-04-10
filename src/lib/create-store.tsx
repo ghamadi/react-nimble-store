@@ -60,13 +60,13 @@ export function createStore<T>(stateBuilder: StateBuilder<T> | T): Store<T> {
     const setState: StateSetter<T> = useCallback((input) => {
       switch (typeof input) {
         case 'function':
-          stateRef.current = structuredClone({ ...stateRef.current, ...input(stateRef.current) });
+          stateRef.current = { ...stateRef.current, ...input(stateRef.current) };
           break;
         case 'object':
-          stateRef.current = structuredClone({ ...stateRef.current, ...input });
+          stateRef.current = { ...stateRef.current, ...input };
           break;
         default:
-          stateRef.current = structuredClone(input);
+          stateRef.current = input;
       }
       subscribers.forEach((callback) => callback());
     }, []);
@@ -93,13 +93,13 @@ export function createStore<T>(stateBuilder: StateBuilder<T> | T): Store<T> {
   function useStore<R>(selector?: Selector<T, R>, predicate?: Predicate<R>) {
     // Returns the entire state object if `selector` is undefined
     const selectorFn: Selector<T, R> = useCallback(
-      (state) => selector?.(state) ?? (state as unknown as R),
+      (state) => (selector ? selector(state) : (state as unknown as R)),
       [selector]
     );
 
     // Defaults to "===" if `predicate` is undefined.
     const predicateFn: Predicate<R> = useCallback(
-      (arg1, arg2) => predicate?.(arg1, arg2) ?? arg1 === arg2,
+      (arg1, arg2) => (predicate ? predicate(arg1, arg2) : arg1 === arg2),
       [predicate]
     );
 
@@ -109,7 +109,7 @@ export function createStore<T>(stateBuilder: StateBuilder<T> | T): Store<T> {
     }
 
     const { getState, subscribe } = contextValue;
-    const [selectedState, setSelectedState] = useState(selectorFn(getState()));
+    const [selectedState, setSelectedState] = useState(() => selectorFn(getState()));
 
     useEffect(() => {
       return subscribe(() => {
