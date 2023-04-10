@@ -25,7 +25,7 @@ type Predicate<T> = (arg1: T, arg2: T) => boolean;
 
 type ProviderProps<T> = {
   children: ReactNode;
-  value?: StateBuilder<T>;
+  value?: StateBuilder<T> | T;
 };
 
 export type Store<T> = {
@@ -42,7 +42,7 @@ export type Store<T> = {
  * @param stateBuilder - The callback used to setup the store
  * @returns A `Store` object
  */
-export function createStore<T>(stateBuilder: StateBuilder<T>): Store<T> {
+export function createStore<T>(stateBuilder: StateBuilder<T> | T): Store<T> {
   const Context = createContext<StoreContextValue<T> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
 
@@ -71,13 +71,14 @@ export function createStore<T>(stateBuilder: StateBuilder<T>): Store<T> {
       subscribers.forEach((callback) => callback());
     }, []);
 
-    // Initialize the context value passed to the provider
-    const stateRef = useRef((props.value ?? stateBuilder)(setState));
-    // const actionsRef = useRef((props.actions ?? actions)?.(setState) ?? ({} as Actions));
-    const contextValue: StoreContextValue<T> = {
-      getState,
-      subscribe
-    };
+    // stateBuilder is either the callback expecting `setState` or just a value
+    let initialState = props.value ?? stateBuilder;
+    if (typeof initialState === 'function') {
+      initialState = (initialState as StateBuilder<T>)(setState);
+    }
+
+    const stateRef = useRef(initialState);
+    const contextValue: StoreContextValue<T> = { getState, subscribe };
 
     return <Context.Provider value={contextValue}>{props.children}</Context.Provider>;
   }
@@ -90,15 +91,15 @@ export function createStore<T>(stateBuilder: StateBuilder<T>): Store<T> {
    * @returns data from the `state` of the closest parent provider
    */
   function useStore<R>(selector?: Selector<T, R>, predicate?: Predicate<R>) {
-    // Rentires the entire state object if `selector` is undefined
+    // Returns the entire state object if `selector` is undefined
     const selectorFn: Selector<T, R> = useCallback(
-      (state) => (selector ? selector(state) : (state as unknown as R)),
+      (state) => selector?.(state) ?? (state as unknown as R),
       [selector]
     );
 
     // Defaults to "===" if `predicate` is undefined.
-    const equalityChecker: Predicate<R> = useCallback(
-      (arg1, arg2) => (predicate ? predicate(arg1, arg2) : arg1 === arg2),
+    const predicateFn: Predicate<R> = useCallback(
+      (arg1, arg2) => predicate?.(arg1, arg2) ?? arg1 === arg2,
       [predicate]
     );
 
@@ -113,11 +114,11 @@ export function createStore<T>(stateBuilder: StateBuilder<T>): Store<T> {
     useEffect(() => {
       return subscribe(() => {
         const newValue = selectorFn(getState());
-        if (!equalityChecker(newValue, selectedState)) {
+        if (!predicateFn(newValue, selectedState)) {
           setSelectedState(newValue);
         }
       });
-    }, [equalityChecker, getState, selectedState, selectorFn, subscribe]);
+    }, [predicateFn, getState, selectedState, selectorFn, subscribe]);
 
     return selectedState;
   }
