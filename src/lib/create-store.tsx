@@ -18,8 +18,8 @@ type StoreContextValue<T, A> = {
 };
 
 type StateSetter<T> = (arg: StateSetterArg<T>) => void;
-type StateSetterArg<T> = StateSetterCallback<T> | Exactly<T, Partial<T>>;
-type StateSetterCallback<T> = (state: T) => T;
+type StateSetterArg<T> = StateSetterCallback<T> | Exactly<Partial<T>, T>;
+type StateSetterCallback<T> = (state: T) => Exactly<Partial<T>, T>;
 
 type Selector<T, R> = (state: T) => R;
 type Predicate<T> = (arg1: T, arg2: T) => boolean;
@@ -70,7 +70,7 @@ export function createStore<T, A>(state: T, actions?: ActionsBuilder<T, A>): Sto
     const setState: StateSetter<T> = useCallback((input) => {
       switch (typeof input) {
         case 'function':
-          stateRef.current = structuredClone(input(stateRef.current));
+          stateRef.current = structuredClone({ ...stateRef.current, ...input(stateRef.current) });
           break;
         case 'object':
           stateRef.current = structuredClone({ ...stateRef.current, ...input });
