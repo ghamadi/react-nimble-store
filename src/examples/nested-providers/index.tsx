@@ -1,7 +1,15 @@
 import { ChangeEvent, useCallback } from 'react';
 import { createStore } from '~/lib/create-store';
 
-const CounterStore = createStore({ count: 0, step: 1 }, (setState) => ({
+interface Store {
+  count: number;
+  step: number;
+  setCount: (value: number) => void;
+}
+
+const CounterStore = createStore<Store>((setState) => ({
+  count: 0,
+  step: 1,
   setCount(value: number) {
     setState({ count: value });
   }
@@ -10,7 +18,7 @@ const CounterStore = createStore({ count: 0, step: 1 }, (setState) => ({
 function Slider() {
   const step = CounterStore.useStore((state) => state.step);
   const count = CounterStore.useStore((state) => state.count);
-  const { setCount } = CounterStore.useActions();
+  const setCount = CounterStore.useStore((state) => state.setCount);
 
   const handleSliderChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -55,12 +63,10 @@ export default function NestedProvidersExample() {
 function NestedSlider() {
   return (
     <CounterStore.Provider
-      state={{ step: 5, count: 0, test: 6 }}
-      actions={(_set) => ({
-        test: () => 2,
-        setCount(v) {
-          console.log(v);
-        }
+      value={(setState) => ({
+        count: 1,
+        setCount: (v) => setState(v),
+        step: 4
       })}
     >
       <Slider />

@@ -9,37 +9,27 @@ import {
 } from 'react';
 
 // A utility type to return the partial of a type without allowing extra properties
-// type Exactly<T> = Partial<T> & (T extends Partial<T> ? Partial<T> : never);
 type Exactly<T, P> = T & Record<Exclude<keyof P, keyof T>, never>;
-// type Exactly<T> = T | Record<Pick<keyof Partial<T>, keyof T>, T[keyof T]>
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Action = (...args: any[]) => void;
-type Actions = { [k in string]: Action };
 
 type StoreContextValue<T> = {
   getState: () => T;
-  getActions: () => Actions;
   subscribe: (callback: () => void) => () => void;
 };
 
+type StateBuilder<T> = (setState: StateSetter<T>) => T;
 type StateSetter<T> = (arg: StateSetterArg<T>) => void;
 type StateSetterArg<T> = ((state: T) => Exactly<Partial<T>, T>) | Exactly<Partial<T>, T>;
 
 type Selector<T, R> = (state: T) => R;
 type Predicate<T> = (arg1: T, arg2: T) => boolean;
 
-type ActionsBuilder<T> = (setState: StateSetter<T>) => Actions;
-
 type ProviderProps<T> = {
   children: ReactNode;
-  state?: T;
-  actions?: ActionsBuilder<T>;
+  value?: StateBuilder<T>;
 };
 
 export type Store<T> = {
   Provider: (props: ProviderProps<T>) => JSX.Element;
-  useActions: () => Actions;
   useStore: <R>(selector?: (state: T) => R, predicate?: (arg1: R, arg2: R) => boolean) => R;
 };
 
@@ -49,19 +39,16 @@ export type Store<T> = {
  * The returned `Store` exposes a `Provider` component — a wrapper for `Context.Provider`, and
  * consuming hooks setup to efficiently trigger the consumer components' re-rendering where needed only.
  *
- * @param state - The initial state of the store.
+ * @param stateBuilder - The callback used to setup the store
  * @returns A `Store` object
  */
-export function createStore<T>(state: T, actions?: ActionsBuilder<T>): Store<T> {
+export function createStore<T>(stateBuilder: StateBuilder<T>): Store<T> {
   const Context = createContext<StoreContextValue<T> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
 
   function Provider(props: ProviderProps<T>) {
     // Returns the current version of the state
     const getState = useCallback(() => stateRef.current, []);
-
-    // Returns the current version of the actions
-    const getActions = useCallback(() => actionsRef.current, []);
 
     // Used by `useSelector` to pass a callback that triggers a state change in the hook
     const subscribe = useCallback((callback: () => void) => {
@@ -85,25 +72,14 @@ export function createStore<T>(state: T, actions?: ActionsBuilder<T>): Store<T> 
     }, []);
 
     // Initialize the context value passed to the provider
-    const stateRef = useRef(props.state ?? state);
-    const actionsRef = useRef((props.actions ?? actions)?.(setState) ?? ({} as Actions));
+    const stateRef = useRef((props.value ?? stateBuilder)(setState));
+    // const actionsRef = useRef((props.actions ?? actions)?.(setState) ?? ({} as Actions));
     const contextValue: StoreContextValue<T> = {
       getState,
-      getActions,
       subscribe
     };
 
     return <Context.Provider value={contextValue}>{props.children}</Context.Provider>;
-  }
-
-  /**
-   * Hook to provide the set of actions provided in the store that can trigger state change
-   *
-   * @returns the store's `actions` object
-   */
-  function useActions() {
-    const contextValue = useContextValue('useActions');
-    return contextValue.getActions();
   }
 
   /**
@@ -126,7 +102,11 @@ export function createStore<T>(state: T, actions?: ActionsBuilder<T>): Store<T> 
       [predicate]
     );
 
-    const contextValue = useContextValue('useStore');
+    const contextValue = useContext(Context);
+    if (!contextValue) {
+      throw new Error('useStore must be used within a Store.Provider');
+    }
+
     const { getState, subscribe } = contextValue;
     const [selectedState, setSelectedState] = useState(selectorFn(getState()));
 
@@ -142,24 +122,5 @@ export function createStore<T>(state: T, actions?: ActionsBuilder<T>): Store<T> 
     return selectedState;
   }
 
-  /**
-   * Internal hook used for validating a Provider parent exists
-   *
-   * @param hookName - The name of the calling hook. Used in the error message to help debugging.
-   * @returns the output of `useContext` assuming a `Provider` exists as a parent
-   * @throws an error if the `useContext` returns undefined
-   */
-  function useContextValue(hookName: string) {
-    const contextValue = useContext(Context);
-    if (!contextValue) {
-      throw new Error(`${hookName} must be used within a Store.Provider`);
-    }
-    return contextValue;
-  }
-
-  return {
-    Provider,
-    useActions,
-    useStore
-  };
+  return { Provider, useStore };
 }
