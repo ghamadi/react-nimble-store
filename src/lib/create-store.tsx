@@ -13,9 +13,13 @@ import {
 type Exactly<T, P> = T & Record<Exclude<keyof P, keyof T>, never>;
 // type Exactly<T> = T | Record<Pick<keyof Partial<T>, keyof T>, T[keyof T]>
 
-type StoreContextValue<T, A> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Action = (...args: any[]) => void;
+type Actions = { [k in string]: Action };
+
+type StoreContextValue<T> = {
   getState: () => T;
-  getActions: () => A;
+  getActions: () => Actions;
   subscribe: (callback: () => void) => () => void;
 };
 
@@ -25,17 +29,17 @@ type StateSetterArg<T> = ((state: T) => Exactly<Partial<T>, T>) | Exactly<Partia
 type Selector<T, R> = (state: T) => R;
 type Predicate<T> = (arg1: T, arg2: T) => boolean;
 
-type ActionsBuilder<T, A> = (setState: StateSetter<T>) => A;
+type ActionsBuilder<T> = (setState: StateSetter<T>) => Actions;
 
-type ProviderProps<T, A> = {
+type ProviderProps<T> = {
   children: ReactNode;
   state?: T;
-  actions?: ActionsBuilder<T, A>;
+  actions?: ActionsBuilder<T>;
 };
 
-export type Store<T, A> = {
-  Provider: (props: ProviderProps<T, A>) => JSX.Element;
-  useActions: () => A;
+export type Store<T> = {
+  Provider: (props: ProviderProps<T>) => JSX.Element;
+  useActions: () => Actions;
   useStore: <R>(selector?: (state: T) => R, predicate?: (arg1: R, arg2: R) => boolean) => R;
 };
 
@@ -48,11 +52,11 @@ export type Store<T, A> = {
  * @param state - The initial state of the store.
  * @returns A `Store` object
  */
-export function createStore<T, A>(state: T, actions?: ActionsBuilder<T, A>): Store<T, A> {
-  const Context = createContext<StoreContextValue<T, A> | undefined>(undefined);
+export function createStore<T>(state: T, actions?: ActionsBuilder<T>): Store<T> {
+  const Context = createContext<StoreContextValue<T> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
 
-  function Provider(props: ProviderProps<T, A>) {
+  function Provider(props: ProviderProps<T>) {
     // Returns the current version of the state
     const getState = useCallback(() => stateRef.current, []);
 
@@ -82,8 +86,8 @@ export function createStore<T, A>(state: T, actions?: ActionsBuilder<T, A>): Sto
 
     // Initialize the context value passed to the provider
     const stateRef = useRef(props.state ?? state);
-    const actionsRef = useRef((props.actions ?? actions)?.(setState) ?? ({} as A));
-    const contextValue: StoreContextValue<T, A> = {
+    const actionsRef = useRef((props.actions ?? actions)?.(setState) ?? ({} as Actions));
+    const contextValue: StoreContextValue<T> = {
       getState,
       getActions,
       subscribe
