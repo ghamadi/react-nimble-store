@@ -1,4 +1,5 @@
 import { ChangeEvent } from 'react';
+import NestedProvidersExample from '~/examples/nested-providers';
 import { createStore } from '~/lib/create-store';
 
 const CountersState = { x: 0, y: 0, z: 0 };
@@ -76,6 +77,8 @@ export default function App() {
 
       {/* Does not react to changes in the store */}
       <ConsumerThatDoesNotReact />
+
+      <NestedProvidersExample />
     </CountersStore.Provider>
   );
 }

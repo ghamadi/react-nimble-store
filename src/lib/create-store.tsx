@@ -9,7 +9,9 @@ import {
 } from 'react';
 
 // A utility type to return the partial of a type without allowing extra properties
-type Exactly<T, P> = T & Record<Exclude<keyof P, keyof T>, T[keyof T]>;
+// type Exactly<T> = Partial<T> & (T extends Partial<T> ? Partial<T> : never);
+type Exactly<T, P> = T & Record<Exclude<keyof P, keyof T>, never>;
+// type Exactly<T> = T | Record<Pick<keyof Partial<T>, keyof T>, T[keyof T]>
 
 type StoreContextValue<T, A> = {
   getState: () => T;
@@ -18,8 +20,7 @@ type StoreContextValue<T, A> = {
 };
 
 type StateSetter<T> = (arg: StateSetterArg<T>) => void;
-type StateSetterArg<T> = StateSetterCallback<T> | Exactly<Partial<T>, T>;
-type StateSetterCallback<T> = (state: T) => Exactly<Partial<T>, T>;
+type StateSetterArg<T> = ((state: T) => Exactly<Partial<T>, T>) | Exactly<Partial<T>, T>;
 
 type Selector<T, R> = (state: T) => R;
 type Predicate<T> = (arg1: T, arg2: T) => boolean;
@@ -28,10 +29,8 @@ type ActionsBuilder<T, A> = (setState: StateSetter<T>) => A;
 
 type ProviderProps<T, A> = {
   children: ReactNode;
-  value?: {
-    state: T;
-    actions?: ActionsBuilder<T, A>;
-  };
+  state?: T;
+  actions?: ActionsBuilder<T, A>;
 };
 
 export type Store<T, A> = {
@@ -82,8 +81,8 @@ export function createStore<T, A>(state: T, actions?: ActionsBuilder<T, A>): Sto
     }, []);
 
     // Initialize the context value passed to the provider
-    const stateRef = useRef(props.value?.state ?? state);
-    const actionsRef = useRef((props.value?.actions ?? actions)?.(setState) ?? ({} as A));
+    const stateRef = useRef(props.state ?? state);
+    const actionsRef = useRef((props.actions ?? actions)?.(setState) ?? ({} as A));
     const contextValue: StoreContextValue<T, A> = {
       getState,
       getActions,
