@@ -61,15 +61,13 @@ export default function NestedProvidersExample() {
 }
 
 function NestedSlider() {
-  const state = CounterStore.useStore() as Store;
-  console.log({ state });
   return (
     <CounterStore.Provider
-      value={(_setState) => ({
-        setCount() {
-          console.log('');
+      value={(setState) => ({
+        setCount(value) {
+          setState({ count: value });
         },
-        count: 1,
+        count: 0,
         step: 5
       })}
     >

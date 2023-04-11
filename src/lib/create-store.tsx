@@ -8,9 +8,6 @@ import {
   useEffect
 } from 'react';
 
-// A utility type to return the partial of a type without allowing extra properties
-type Exactly<T, P> = T & Record<Exclude<keyof P, keyof T>, never>;
-
 type StoreContextValue<T> = {
   getState: () => T;
   subscribe: (callback: () => void) => () => void;
@@ -18,7 +15,7 @@ type StoreContextValue<T> = {
 
 type StateBuilder<T> = (setState: StateSetter<T>) => T;
 type StateSetter<T> = (arg: StateSetterArg<T>) => void;
-type StateSetterArg<T> = ((state: T) => Exactly<Partial<T>, T>) | Exactly<Partial<T>, T>;
+type StateSetterArg<T> = ((state: T) => Partial<T>) | Partial<T>;
 
 type Selector<T, R> = (state: T) => R;
 type Predicate<T> = (arg1: T, arg2: T) => boolean;
