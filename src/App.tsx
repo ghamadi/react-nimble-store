@@ -1,5 +1,5 @@
 import { ChangeEvent } from 'react';
-import NestedProvidersExample from '~/examples/nested-providers';
+import SiblingProviders from '~/examples/nested-providers';
 import { createStore } from '~/lib/create-store';
 
 type K = 'x' | 'y' | 'z';
@@ -89,7 +89,7 @@ export default function App() {
       {/* Does not react to changes in the store */}
       <ConsumerThatDoesNotReact />
 
-      <NestedProvidersExample />
+      <SiblingProviders />
     </CountersStore.Provider>
   );
 }

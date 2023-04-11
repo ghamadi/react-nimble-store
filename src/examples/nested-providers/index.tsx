@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback } from 'react';
+import { ChangeEvent, useCallback, useEffect, useRef } from 'react';
 import { createStore } from '~/lib/create-store';
 
 interface Store {
@@ -7,7 +7,7 @@ interface Store {
   setCount: (value: number) => void;
 }
 
-const CounterStore = createStore<Store>((setState) => ({
+const SliderStore = createStore<Store>((setState) => ({
   count: 0,
   step: 1,
   setCount(value: number) {
@@ -16,9 +16,14 @@ const CounterStore = createStore<Store>((setState) => ({
 }));
 
 function Slider() {
-  const step = CounterStore.useStore((state) => state.step);
-  const count = CounterStore.useStore((state) => state.count);
-  const setCount = CounterStore.useStore((state) => state.setCount);
+  const step = SliderStore.useStore((state) => state.step);
+  const count = SliderStore.useStore((state) => state.count);
+  const setCount = SliderStore.useStore((state) => state.setCount);
+  const rendersCount = useRef(1);
+
+  useEffect(() => {
+    rendersCount.current++;
+  });
 
   const handleSliderChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -30,8 +35,10 @@ function Slider() {
 
   return (
     <div>
-      <h4> Step: {step} </h4>
-      <h4> Count: {count} </h4>
+      <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+        <p> Step: {step} </p>
+        <p> Renders: {rendersCount.current} </p>
+      </div>
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
         <input
           type="range"
@@ -48,30 +55,38 @@ function Slider() {
   );
 }
 
-export default function NestedProvidersExample() {
+export default function SiblingProviders() {
   return (
-    <CounterStore.Provider>
-      <h3>Nested Providers Example</h3>
-      <div style={{ width: '500px' }}>
-        <Slider />
-        <NestedSlider />
-      </div>
-    </CounterStore.Provider>
+    <div
+      style={{
+        width: '500px',
+        gap: 10,
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
+      <h3>Sibling Providers Example</h3>
+      <SliderWrapper />
+      <SliderWrapper step={5} />
+      <SliderWrapper step={10} />
+    </div>
   );
 }
 
-function NestedSlider() {
+function SliderWrapper(props: { step?: number }) {
   return (
-    <CounterStore.Provider
+    <SliderStore.Provider
       value={(setState) => ({
+        count: 0,
+        step: props.step ?? 1,
         setCount(value) {
           setState({ count: value });
-        },
-        count: 0,
-        step: 5
+        }
       })}
     >
-      <Slider />
-    </CounterStore.Provider>
+      <div style={{ border: '1px solid', padding: 10 }}>
+        <Slider />
+      </div>
+    </SliderStore.Provider>
   );
 }
