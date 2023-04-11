@@ -42,7 +42,7 @@ export type Store<T> = {
  * @param stateBuilder - The callback used to setup the store
  * @returns A `Store` object
  */
-export function createStore<T>(stateBuilder: StateBuilder<T>): Store<T> {
+export function createStore<U = never, T extends U = U>(stateBuilder: StateBuilder<T>) {
   const Context = createContext<StoreContextValue<T> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
 
