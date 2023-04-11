@@ -19,8 +19,9 @@ export default function SiblingProviders() {
   return (
     <div
       style={{
-        width: '500px',
-        gap: 10,
+        width: '700px',
+        gap: 30,
+        margin: 'auto',
         display: 'flex',
         flexDirection: 'column'
       }}
@@ -44,7 +45,7 @@ function SliderConfigProvider(props: { step: number }) {
         }
       })}
     >
-      <div style={{ border: '1px solid', padding: 10 }}>
+      <div style={{ border: '1px solid', padding: 20 }}>
         <SliderWrapper />
         <DisplayedApples />
       </div>
@@ -56,8 +57,8 @@ function SliderWrapper() {
   const step = SliderStore.useStore((state) => state.step);
 
   return (
-    <div style={{}}>
-      <h4> Step: {step} </h4>
+    <div>
+      <h4 style={{ margin: '0px 0 10px 0' }}> Step: {step} </h4>
       <Slider />
     </div>
   );
@@ -89,7 +90,7 @@ function Slider() {
   );
 
   return (
-    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1 }}>
+    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
       <input
         type="range"
         step={step}
@@ -97,7 +98,7 @@ function Slider() {
         max="50"
         value={count}
         onChange={handleSliderChange}
-        style={{ width: '100%' }}
+        style={{ flex: 1 }}
       />
       <span>{count}</span>
     </div>
