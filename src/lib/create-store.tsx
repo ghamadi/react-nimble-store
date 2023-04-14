@@ -25,11 +25,6 @@ type ProviderProps<T> = {
   value?: StateBuilder<T>;
 };
 
-export type Store<T> = {
-  Provider: (props: ProviderProps<T>) => JSX.Element;
-  useStore: <R>(selector?: (state: T) => R, predicate?: (arg1: R, arg2: R) => boolean) => R;
-};
-
 /**
  * Creates a Store object for managing state in a React application.
  *
@@ -95,10 +90,7 @@ export function createStore<U = never, T extends U = U>(stateBuilder: StateBuild
       [predicate]
     );
 
-    const contextValue = useContext(Context);
-    if (!contextValue) {
-      throw new Error('useStore must be used within a Store.Provider');
-    }
+    const contextValue = useValidContext('useStore');
 
     const { getState, subscribe } = contextValue;
     const [selectedState, setSelectedState] = useState(() => selectorFn(getState()));
@@ -115,5 +107,26 @@ export function createStore<U = never, T extends U = U>(stateBuilder: StateBuild
     return selectedState;
   }
 
-  return { Provider, useStore };
+  /**
+   * @returns a function to read the store's current state without subscribing to changes in the store
+   */
+  function useGetState() {
+    const contextValue = useValidContext('useGetState');
+    return contextValue.getState;
+  }
+
+  /**
+   * An internal hook to get and validate the provided context value
+   * @param callerName - the name of the hook calling useValidContext
+   * @returns the output of useContextValue if defined. Throws an error otherwise.
+   */
+  function useValidContext(callerName: string) {
+    const contextValue = useContext(Context);
+    if (!contextValue) {
+      throw new Error(`${callerName} must be used within a Store.Provider`);
+    }
+    return contextValue;
+  }
+
+  return { Provider, useStore, useGetState };
 }
