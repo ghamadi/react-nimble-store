@@ -78,19 +78,10 @@ export function createStore<U = never, T extends U = U>(stateBuilder: StateBuild
    * @returns data from the `state` of the closest parent provider
    */
   function useStore<R>(selector?: Selector<T, R>, predicate?: Predicate<R>) {
-    // Returns the entire state object if `selector` is undefined
-    const selectorFn: Selector<T, R> = useCallback(
-      (state) => (selector ? selector(state) : (state as unknown as R)),
-      [selector]
-    );
-
-    // Defaults to "===" if `predicate` is undefined.
-    const predicateFn: Predicate<R> = useCallback(
-      (arg1, arg2) => (predicate ? predicate(arg1, arg2) : arg1 === arg2),
-      [predicate]
-    );
-
     const contextValue = useValidContext('useStore');
+
+    const predicateFn = usePredicate(predicate);
+    const selectorFn = useStoreSelector(selector);
 
     const { getState, subscribe } = contextValue;
     const [selectedState, setSelectedState] = useState(() => selectorFn(getState()));
@@ -105,6 +96,58 @@ export function createStore<U = never, T extends U = U>(stateBuilder: StateBuild
     }, [predicateFn, getState, selectedState, selectorFn, subscribe]);
 
     return selectedState;
+  }
+
+  function useSubscribe<R>(selector?: Selector<T, R>, predicate?: Predicate<R>) {
+    const contextValue = useValidContext('useSubscribe');
+
+    const predicateFn = usePredicate(predicate);
+    const selectorFn = useStoreSelector(selector);
+
+    const { getState, subscribe } = contextValue;
+    const selectionRef = useRef<R>();
+    selectionRef.current = selectorFn(getState());
+
+    return useCallback(
+      (cb: () => void) => {
+        return subscribe(() => {
+          const newValue = selectorFn(getState());
+          if (!predicateFn(newValue, selectionRef.current as R)) {
+            selectionRef.current = newValue;
+            cb();
+          }
+        });
+      },
+      [getState, predicateFn, selectorFn, subscribe]
+    );
+  }
+
+  /**
+   * An internal hook to return a selector function
+   * @returns a selector callback that returns part or all of the store's state
+   */
+  function useStoreSelector<R>(selector?: Selector<T, R>) {
+    // Returns the entire state object if `selector` is undefined
+    const selectorFn: Selector<T, R> = useCallback(
+      (state) => (selector ? selector(state) : (state as unknown as R)),
+      [selector]
+    );
+
+    return selectorFn;
+  }
+
+  /**
+   * An internal hook to return a predicate function
+   * @returns a predicate callback that returns the output of the predicate argument if defined, or performs a strict equality check
+   */
+  function usePredicate<R>(predicate?: Predicate<R>) {
+    // Defaults to "===" if `predicate` is undefined.
+    const predicateFn: Predicate<R> = useCallback(
+      (arg1, arg2) => (predicate ? predicate(arg1, arg2) : arg1 === arg2),
+      [predicate]
+    );
+
+    return predicateFn;
   }
 
   /**
@@ -128,5 +171,5 @@ export function createStore<U = never, T extends U = U>(stateBuilder: StateBuild
     return contextValue;
   }
 
-  return { Provider, useStore, useGetState };
+  return { Provider, useStore, useGetState, useSubscribe };
 }
