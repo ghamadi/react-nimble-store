@@ -1,144 +1,401 @@
 # React Nimble Store
-React Nimble Store is a lightweight state management library for React applications based on React's Context API. 
+React Nimble Store is a lightweight and efficient state management library for React applications.
 
-It lives up to its name by providing an easy-to-use API to manage state in your React applications, with all the tools features necessary for performance, and without the overhead of more complex state management solutions.
+It provides a simple API to create a store, access and update its state, and subscribe to state changes. It leverages the Context API under the hood, but enhances it with a subscription-based approach to ensure optimal performance and minimal re-rendering.
 
 ## Motivation
-The main drawback when using the Context API is that _all_ consumers re-render when the state of the provider changes. The higher up the component tree the provider is, the worse the problem.
+The main drawback when using the Context API is that _all_ consumers re-render when the state of the provider changes. The higher up the component tree the provider is, the higher the performance impact. However, Contexts remain very effective - and very flexible - tools to share state.
 
-This abstraction aims to target that drawback in a rather simple lightweight approach that relies on the pub-sub pattern to manually trigger re-renders instead of using state.
-
-In many cases, using a full-featured state management library like Redux is overkill when the goal is just to share state between a few components in different parts of your app. 
-
-## Inspiration
-The pattern used is _heavily_ inspired by [this great video](https://www.youtube.com/watch?v=ZKlXqrcBx88) from Jack Herrington, and the library borrows the names of its hooks from Redux. 
-
-However, unlike Redux, the concept of actions and reducers is non-existent. This is just a supercharged context, nothing more.
+This library targets the efficiency drawback in a rather simple, lightweight approach that rotates around the Context API. In essence, a Store is not much more than a supercharged Context, and the API for using it was designed to be as close as possible to that of the Context API.
 
 ## Features
+- Simple API for creating a store and accessing its state
+- Reusable store instance (one store, many providers)
+- Consuming multiple stores (many stores, many providers)
+- Customizable selectors for granular access to state data
+- Support for custom comparison logic for efficient state updates
+- Transient updates: tracking store changes without re-rendering consumer
+- Type-safe hooks for accessing and updating state
+- Middleware support 
 
-- Simple API for creating a store and accessing state.
-- Efficient state updates that only re-render components when necessary.
-- Supports custom selectors and equality comparison functions.
-- No dependencies, built on React's context and hooks.
-- Stores are reusable (one store, many providers).
-- Nested providers of one or various stores.
-- Easy consumption of various stores without any store merging.
+## Basic Usage
+There are three main steps to utilizing Nimble. 
 
-## Installation
-
-This library is not yet published. 
-
-## Usage
-
-### 1. Create a Store
-
-Create a new store by calling `createStore` and providing a state builder function. The state builder function receives a `setState` function as its argument and should return the initial state.
-
-```tsx
-interface ICounterStore {
-  counter: number;
-  increment: () => void;
-  decrement: () => void;
-}
-
-const CounterStore = createStore<ICounterStore>((setState) => ({
-  counter: 0,
-  increment:() => setState((state) => ({ counter: state.counter + 1 })),
-  decrement:() => setState((state) => ({ counter: state.counter - 1 })),
-}));
+1. Create the store
+```jsx
+const { Provider, useStore } = createStore((setState, getState) => {
+  return {
+    counter: 0,
+    setCount: (value) => setState({counter: value}),
+    increment: () => setState((state) => ({ counter: state.counter + 1 })),
+    decrement: () => setState((state) => ({ counter: state.counter - 1 })),
+  };
+});
 ```
 
-### 2. Provide the Store
-
-Wrap your application or a part of it with the `Provider` component exported by the store.
-
-```tsx
+2. Wrap your application or a part of it with the `Provider`
+```jsx
 function CounterWrapper() {
   return (
-    // Without overriding `value` the provider forwards the initial state
-    <CounterStore.Provider>
+    <Provider>
       <Counter />
-    </CounterStore.Provider>
+    </Provider>
   )
 }
 ```
 
-### 3. Consume the Store
-Access the store's state and actions using the `useStore` hook exported by the store.
-
-```tsx
+3. Consume the store from any component within any child of `Provider`
+```jsx
 function Counter() {
-  // Fetch the provided context as-is
-  const { counter, increment, decrement } = CounterStore.useStore();
+  const counter = useStore((state) => state.counter);
+  const increment = useStore((state) => state.increment);
+  const decrement = useStore((state) => state.decrement);
 
-  // This component re-renders when any element in the store changes
   return (
     <div>
-      <button onClick={decrement}>-</button>
-      <span>{counter}</span>
-      <button onClick={increment}>+</button>
+      <h1>Counter: {counter}</h1>
+      <button onClick={increment}>Increment</button>
+      <button onClick={decrement}>Decrement</button>
     </div>
   );
 }
 ```
 
-## Advanced Usage
+> **Note**
+>
+> As an alternative to the above three selectors, we could use `const {counter, increment, decrement} = useStore()`.
+> However, keep in mind that this means your component reacts to _any_ change in the store's state. If you are not selecting
+> all the store's properties, it is usually better to use `useStore` with a selector callback.
 
-### Custom Selectors
-
-You can use a custom selector function with `useStore` to return a specific part of the state. The selector function receives the state as its argument and should return the desired data.
-
+### Usage with Typescript
+Using Nimble with Typescript is dead simple; just pass a type argument to `createStore`.
 ```tsx
-function CounterDisplay() {
-  // Only the `counter` value from the state will be used in this component
-  const counter = CounterStore.useStore((state) => state.counter);
+interface ICounterStore {
+  counter: number;
+  increment: () => void;
+  decrement: () => void;
+  setCount: (value: number) => void;
+}
 
-  return <div>Counter: {counter}</div>;
+const CounterStore = createStore<ICounterStore>((setState, getState) => {
+  return {
+    counter: 0,
+    setCount: (value) => setState({counter: value}),
+    increment: () => setState((state) => ({ counter: state.counter + 1 })),
+    decrement: () => setState((state) => ({ counter: state.counter - 1 })),
+  };
+});
+```
+
+That's it! Now the provider and the consumption hooks are typed.
+
+### Reusing the Store Instance
+Continuing with the counter example above, imagine you have two (or more) sections in your app, each requiring its own instance of the `CounterStore`. You could duplicate your code and create two (or more) stores for each section, _or_ you could just wrap each section with its own `Provider`.
+
+```jsx
+const { Provider, useStore } = createStore(...)
+
+function FruitBasket({fruit}) {
+  const counter = useStore((state) => state.counter);
+
+  return (
+    <div>
+      <h2>{fruit} count: {counter}</h2>
+      <div>
+        {[...Array(count).keys()].map((i) => {
+          return <img key={i} src={`/icons/${fruit}`} />;
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FruitSection({fruit}) {
+  const increment = useStore((state) => state.increment);
+  const decrement = useStore((state) => state.decrement);
+
+  return (
+    <div>
+      <button onClick={increment}>Increment</button>
+      <button onClick={decrement}>Decrement</button>
+      <hr />
+      <FruitBasket fruit={fruit} />
+    </div>
+  );
+}
+
+function OrangesSection(props) {
+  return (
+    <Provider>
+      <h1>This section fills the app's Orange Basket</h1>
+      <FruitSection fruit="oranges" />
+    </Provider>
+  )
+}
+
+function ApplesSection(props) {
+  return (
+    <Provider>
+      <h1>This section fills the app's Apple Basket</h1>
+      <FruitSection fruit="apples" />
+    </Provider>
+  )
+}
+
+function App() {
+  return (
+    <>
+      <ApplesSection />
+      <OrangesSection />
+    </>
+  )
+}
+
+```
+
+### Using Multiple Stores
+Typically, you may want to separate your application state into different stores for better organization. There isn't much to doing this than creating the store and placing its provider where suitable. 
+
+```jsx
+const { Provider: CounterProvider, useStore: useCounterStore } = crateStore(...)
+
+const { Provider: ThemeProvider, useStore: useThemeStore } = crateStore((setState, getState) => ({
+  theme: 'light',
+  toggleTheme: () => setState((state) => ({ 
+    theme: state.theme === 'light' ? 'dark' : 'light' 
+  }))
+}))
+
+function App() {
+  return (
+    <ThemeProvider>
+
+      <CounterProvider>
+        <FruitSection fruit="apples" />
+      </CounterProvider>
+
+      <CounterProvider>
+        <FruitSection fruit="oranges" />
+      </CounterProvider>
+
+    </ThemeProvider>
+  )
 }
 ```
 
-> ** Note **
->
-> Unless your state rarely changes, or you want your component to react to the entire store, 
-> it is recommended to always use this pattern
+### Overriding State
+With a store instance being reusable through multiple providers, it is possible that sometimes you want to nest providers of the same store instance in order to override part of the initial state for a given subtree.
 
-### Custom Equality Comparison
+Achieving this is simple using the optional `value` prop of the store's `Provider`.
+```jsx
+const themeState = (setState) => ({
+  theme: 'light',
+  toggleTheme: () => setState((state) => ({ 
+    theme: state.theme === 'light' ? 'dark' : 'light' 
+  }))
+})
 
-By default, `useStore` uses strict equality (`===`) to determine if the selected state has changed. You can provide a custom comparison function to implement more advanced equality checks. The comparison function receives two arguments, the current and next selected state, and should return a boolean value.
+const { Provider: ThemeProvider, useStore: useThemeStore } = crateStore(themeState)
 
-```tsx
+function App() {
+  return (
+    <ThemeProvider>
+
+      {/* The default theme for this section is 'light' */}
+      <CounterProvider>
+        <FruitSection fruit="apples" />
+      </CounterProvider>
+
+      <ThemeProvider 
+        value={(setState) => ({
+         ...themeState(setState),
+         theme: 'dark' // set a different default theme for this section
+        })}
+      >
+        <CounterProvider>
+          <FruitSection fruit="oranges" />
+        </CounterProvider>
+      </ThemeProvider>
+
+    </ThemeProvider>
+  )
+}
+```
+
+### Combining Stores
+If you prefer to create one global stores, you can use slices. However, keep in mind that you need to maintain unique names for properties and actions across the slices. 
+
+```jsx
+const counterSlice = (setState, getState) => ({
+  count: 0,
+  setCount: (value) => setState({count: value})
+})
+
+const themeSlice = (setState, getState) => ({
+  theme: 'light',
+  toggleTheme: () => setState((state) => ({ 
+    theme: state.theme === 'light' ? 'dark' : 'light' 
+  }))
+})
+
+const GlobalStore = createStore((setState, getState) => ({
+  ...counterSlice(setState, getState),
+  ...themeSlice(setState, getState)
+}))
+```
+
+### Variations of `useStore`
+The `useStore` hook allows you to access part or all of the state in your store, _and_ listen to changes in the selected state to trigger a component re-render. 
+
+There are three ways in which you can use `useStore`
+
+```jsx
+// grabs the entire state and reacts to any change in the state
+const selection = useStore();
+```
+
+```jsx
+// grabs `someProperty` from the store's state, and only reacts when its value changes
+const selection = useStore(state => state.someProperty)
+```
+
+```jsx
+import isEqual from 'lodash.isequal';
+
+// Uses the `predicate` argument to decide when to react to a change
+const selection = useStore(state => ({  p1: state.p1,  p2: state.p2 }, isEqual))
+```
+
+The `predicate` argument is any function that takes two arguments and returns a boolean. Generally, you would use this argument to perform a custom comparison between the previous selection and the new one. However, keep in mind that you do not need to use it strictly for an equality check.
+
+```jsx
 function CounterEven() {
-  // Only re-render when `counter` goes from even to even or odd to odd
+  // Only re-render when `counter` goes from even to odd or vice versa
   const counter = CounterStore.useStore(
     (state) => state.counter,
     (prev, next) => prev % 2 === next % 2
   );
 
-  return <div>Counter (even): {counter}</div>;
+  return <div>Counter: {counter}</div>;
 }
 ```
 
-## API
+### Accessing State Without Subscribing to Changes
+The `useStore` hook has everything needed to grab or map state from your store. However, there might be cases where you want to read the state, but don't want your component re-rendering when that state changes. 
 
-- ### `createStore(stateBuilder): Store`:
-Creates a new store object for managing state in a React application.
-  - Receives a `stateBuilder` argument - A callback used to set up the store. It receives a `setState` function as its argument and should return the initial state.
+This can be useful when your component is already subscribed to some part of the store, and needs to access more state _when_ that part changes. 
 
-  - Returns a `Store` object with the following properties:
-    - `Provider` - A component that wraps your application or a part of it, providing access to the store's state.
-    - `useStore` - A hook that allows you to access the store's state and actions. _Must_ be used within a component wrapped by a `Store.Provider`.
+It can also be useful when you only need to check the state while handling an event.
 
-### `Store.Provider`
-A component that wraps your application or a part of it, providing access to the store's state. It accepts the following props:
+```jsx
+const Store = createStore((setState) => ({
+  text: '',
+  setText: (value) => setState({text: value})
+}))
 
-- `children` - The React components to be rendered inside the provider.
-- `value` - An optional callback function used to set up the store. If provided, it will override the `stateBuilder` used when creating the store.
+function TextInput() {
+  const setText = Store.useStore((state) => state.setText);
+  const getState = Store.useGetState();
 
-### `Store.useStore`
-A hook that allows you to access the store's state and actions.
+  // Update, but do not react to changes in the store
+  const handleChange = (event) => {
+    setText(event.target.value);
+  };
 
-- `selector` - An optional callback function used to select a specific part of the state. If not provided, the entire state object will be used.
-- `predicate` - An optional callback function used to provide custom comparison logic when "===" is not enough. If not provided, strict equality ("===") will be used.
+  // Access the current state when the `submit` button is clicked
+  const handleSubmit = () => {
+    const state = getState();
+    console.log(`Submitted text: ${state.text}`);
+  };
 
-Returns the selected state or the entire state object if no selector is provided.
+  return (
+    <div>
+      <input type="text" onChange={handleChange} />
+      <button onClick={handleSubmit}>Submit</button>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Store.Provider>
+      <TextInput />
+    </Store.Provider>
+  )
+}
+```
+
+### Transient Update: Subscribing to State Change _Without_ Rerendering
+Sometimes you want to listen to changes in the state, but you do not need to rerender the component every time it changes. This is where `useSubscribe` comes in.
+
+A typical use-case for this is when you want to perform a side effect when the state changes. The rendered component does not care about the state, so `useStore` is not the ideal option.
+
+```jsx
+function CountLogger() {
+  const getState = Store.useGetState()
+
+  // listen ONLY to changes in `count`
+  const subscribe = Store.useSubscribe(state => state.count)
+
+  useEffect(() => {
+    // the subscribe callback will always receive the updated state based on the selector passed to `useSubscribe`
+    const unsubscribe = subscribe((count) => {
+      console.log(`The count is now: ${count}`)
+    })
+
+    return () => unsubscribe();
+  }, [])
+
+  return null
+}
+```
+
+### Middleware Integration
+
+`createStore` allows you to add middleware to your state management logic. Middleware is a higher-order function that intercepts the `setState` function and can modify the behavior of the state updates. 
+
+To add middleware to your state management logic, simply pass it as the second argument to the createStore function.
+
+```jsx
+// Define a middleware function that logs state changes
+const loggerMiddleware = (setState, getState) => {
+  return input => {
+    console.log('Previous state:', getState());
+    console.log('Action:', input);
+    setState(input);
+    console.log('Next state:', getState());
+  };
+};
+
+// Define the state builder function that returns the state object
+const stateBuilder = (setState, getState) => {
+  // ...
+};
+
+// Create the store with the middleware
+const { Provider, useStore } = createStore(stateBuilder, loggerMiddleware);
+
+```
+
+Note that when defining a state-builder or middleware function separate from `createStore` in TypeScript, you do not need to define types for their arguments.
+
+```tsx
+interface Store {
+  // ...
+}
+
+// TS will infer the correct types for setState, getState, and input
+const middleware: Middleware<Store> = (setState, getState) => {
+  return input => {
+    // ...
+  };
+};
+
+// TS will infer the correct types for setState and getState
+const stateBuilder: StateBuilder<Store> = (setState, getState) => {
+  // ...
+};
+
+// The hooks are typed correctly
+const { Provider, useStore } = createStore<Store>(stateBuilder, middleware);
+```
