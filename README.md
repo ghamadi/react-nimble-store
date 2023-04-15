@@ -87,8 +87,8 @@ const CounterStore = createStore<ICounterStore>((setState, getState) => {
 
 That's it! Now the provider and the consumption hooks are typed.
 
-### Reusing the Store Instance
-Continuing with the counter example above, imagine you have two (or more) sections in your app, each requiring its own instance of the `CounterStore`. You could duplicate your code and create two (or more) stores for each section, _or_ you could just wrap each section with its own `Provider`.
+## Reusing the Store Instance
+Continuing with the counter example above, imagine you have two (or more) sections in your app, each requiring its own instance of the `CounterStore`. Instead of duplicating your code and creating two (or more) stores for each section, you can just wrap each section with its own `Provider`.
 
 ```jsx
 const { Provider, useStore } = createStore(...)
@@ -125,7 +125,7 @@ function FruitSection({fruit}) {
 function OrangesSection(props) {
   return (
     <Provider>
-      <h1>This section fills the app's Orange Basket</h1>
+      <h1>This section fills the Oranges' Basket</h1>
       <FruitSection fruit="oranges" />
     </Provider>
   )
@@ -134,7 +134,7 @@ function OrangesSection(props) {
 function ApplesSection(props) {
   return (
     <Provider>
-      <h1>This section fills the app's Apple Basket</h1>
+      <h1>This section fills the Apples' Basket</h1>
       <FruitSection fruit="apples" />
     </Provider>
   )
@@ -151,8 +151,8 @@ function App() {
 
 ```
 
-### Using Multiple Stores
-Typically, you may want to separate your application state into different stores for better organization. There isn't much to doing this than creating the store and placing its provider where suitable. 
+## Using Multiple Stores
+Typically, you may want to separate your state into different stores for better organization.
 
 ```jsx
 const { Provider: CounterProvider, useStore: useCounterStore } = crateStore(...)
@@ -181,7 +181,7 @@ function App() {
 }
 ```
 
-### Overriding State
+## Overriding State
 With a store instance being reusable through multiple providers, it is possible that sometimes you want to nest providers of the same store instance in order to override part of the initial state for a given subtree.
 
 Achieving this is simple using the optional `value` prop of the store's `Provider`.
@@ -220,9 +220,22 @@ function App() {
 }
 ```
 
-### Combining Stores
-If you prefer to create one global stores, you can use slices. However, keep in mind that you need to maintain unique names for properties and actions across the slices. 
+## Combining Stores
+Stores can be combined by nesting their providers in one global provider (similar to the example above)
 
+```jsx
+function GlobalProvider({children}) {
+  <ThemeProvider>
+    <AuthProvider>
+      <CounterProvider>
+        {children}
+      </CounterProvider>
+    </AuthProvider>
+  </ThemeProvider>
+}
+```
+
+Or, if you prefer to create one global store, you can use slices. However, keep in mind that you need to maintain unique names for properties and actions across the slices. 
 ```jsx
 const counterSlice = (setState, getState) => ({
   count: 0,
@@ -242,8 +255,8 @@ const GlobalStore = createStore((setState, getState) => ({
 }))
 ```
 
-### Variations of `useStore`
-The `useStore` hook allows you to access part or all of the state in your store, _and_ listen to changes in the selected state to trigger a component re-render. 
+## Variations of `useStore`
+The `useStore` hook allows you to access part or all of the state in your store, and subscribe to changes in the selected state to trigger a component re-render. 
 
 There are three ways in which you can use `useStore`
 
@@ -278,7 +291,7 @@ function CounterEven() {
 }
 ```
 
-### Accessing State Without Subscribing to Changes
+## Accessing State Without Subscribing to Changes
 The `useStore` hook has everything needed to grab or map state from your store. However, there might be cases where you want to read the state, but don't want your component re-rendering when that state changes. 
 
 This can be useful when your component is already subscribed to some part of the store, and needs to access more state _when_ that part changes. 
@@ -323,7 +336,7 @@ function App() {
 }
 ```
 
-### Transient Update: Subscribing to State Change _Without_ Rerendering
+## Transient Update: Subscribing to State Change _Without_ Rerendering
 Sometimes you want to listen to changes in the state, but you do not need to rerender the component every time it changes. This is where `useSubscribe` comes in.
 
 A typical use-case for this is when you want to perform a side effect when the state changes. The rendered component does not care about the state, so `useStore` is not the ideal option.
@@ -348,7 +361,7 @@ function CountLogger() {
 }
 ```
 
-### Middleware Integration
+## Middleware Integration
 
 `createStore` allows you to add middleware to your state management logic. Middleware is a higher-order function that intercepts the `setState` function and can modify the behavior of the state updates. 
 
