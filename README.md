@@ -14,7 +14,7 @@ This library targets that efficiency drawback in a rather simple, lightweight ap
 - Consuming multiple stores (many stores, many providers)
 - Customizable selectors for granular access to state data
 - Support for custom comparison logic for efficient state updates
-- Transient updates: tracking store changes without re-rendering consumer
+- Transient updates: tracking store changes without re-rendering the consumer
 - Type-safe hooks for accessing and updating state
 - Middleware support 
 
@@ -62,8 +62,8 @@ function Counter() {
 > **Note**
 >
 > As an alternative to the above three selectors, we could use `const {counter, increment, decrement} = useStore()`.
-> However, keep in mind that this means your component reacts to _any_ change in the store's state. If you are not selecting
-> all the store's properties, it is usually better to use `useStore` with a selector callback.
+>
+> However, if you are not selecting all the store's properties (like we are here), it is usually better to use `useStore` with a selector callback.
 
 ### Usage with Typescript
 Using Nimble with Typescript is dead simple; just pass a type argument to `createStore`.
