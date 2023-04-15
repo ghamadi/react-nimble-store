@@ -144,7 +144,7 @@ function NonReactiveConsumer() {
       <p>This component does NOT re-render, even though it is listening to changes in the store.</p>
       <hr style={{ width: '100%' }} />
 
-      <p>Change the slider and check the console to see DETECTED CHANGE</p>
+      <p>Change the slider and check the console to see NEW VALUE</p>
 
       <span>Click this button to log the current state in the store.</span>
       <button onClick={() => console.log(getState())}>Log Current State</button>
