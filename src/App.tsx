@@ -1,95 +1,143 @@
-import { ChangeEvent } from 'react';
-import SiblingProviders from '~/examples/nested-providers';
-import { createStore } from '~/lib/create-store';
+import { ChangeEvent, useCallback, useEffect, useRef } from 'react';
+import { Middleware, StateBuilder, createStore } from '~/lib/create-store';
 
-type K = 'x' | 'y' | 'z';
-interface CountersState {
-  x: number;
-  y: number;
-  z: number;
-  increment: (key: K) => void;
-  decrement: (key: K) => void;
-  set: (key: K, val: number) => void;
+interface SliderStore {
+  count: number;
+  step: number;
+  setCount: (value: number) => void;
 }
 
-const CountersStore = createStore<CountersState>((setState) => ({
-  x: 0,
-  y: 0,
-  z: 0,
-  increment(key: K) {
-    setState((state) => ({ ...state, [key]: state[key] + 1 }));
-  },
+const loggingMiddleware: Middleware<SliderStore> = (set, get) => (input) => {
+  const { count } = get();
+  set(input);
+  console.log(`Middleware log: count changed from ${count} to ${get().count}`);
+};
 
-  decrement(key: K) {
-    setState((state) => ({ ...state, [key]: state[key] - 1 }));
-  },
-
-  set(key: K, value: CountersState[K]) {
-    setState((state) => ({ ...state, [key]: value }));
+const stateBuilder: StateBuilder<SliderStore> = (setState) => ({
+  count: 0,
+  step: 1,
+  setCount(value: number) {
+    setState({ count: value });
   }
-}));
+});
 
-function CounterInput({ counterKey }: { counterKey: K }) {
-  const { useStore } = CountersStore;
-  const value = useStore((state) => state[counterKey]);
-  const increment = useStore((state) => state.increment);
-  const decrement = useStore((state) => state.decrement);
-  const set = useStore((state) => state.set);
+const {
+  Provider: SliderStoreProvider,
+  useStore: useSliderStore,
+  useGetState: useSliderStoreGetState,
+  useSubscribe: useSliderStoreSubscribe
+} = createStore<SliderStore>(stateBuilder, loggingMiddleware);
 
-  const inputChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
-    set(counterKey, +e.target.value);
-  };
-
+export default function App() {
   return (
-    <div>
-      <h3>Value of {counterKey}:</h3>
-      <input value={value} onChange={inputChangeHandler} />
-      <button onClick={() => increment(counterKey)}>Increment</button>
-      <button onClick={() => decrement(counterKey)}>Decrement</button>
+    <div
+      style={{
+        width: '700px',
+        gap: 30,
+        margin: 'auto',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
+      <h3>Features Demo</h3>
+      <span>Each section below interacts with a separate instance of the same `SliderStore`</span>
+      <ViteIconsSlider step={1} />
+      <ViteIconsSlider step={5} />
+      <ViteIconsSlider step={10} />
     </div>
   );
 }
 
-function DisplaySum() {
-  const { useStore } = CountersStore;
-  const { x, y } = useStore(
-    ({ x, y }) => ({ x, y }),
-    // equality checker
-    (arg1, arg2) => JSON.stringify(arg1) === JSON.stringify(arg2)
+// The store instance is reusable thanks to the reusability of its Provider
+function ViteIconsSlider(props: { step: number }) {
+  return (
+    <SliderStoreProvider
+      value={(setState, getState) => ({
+        ...stateBuilder(setState, getState),
+        step: props.step
+      })}
+    >
+      <div style={{ border: '1px solid', padding: 20 }}>
+        <h4 style={{ margin: '0px 0 10px 0' }}> Step: {props.step} </h4>
+        <hr />
+        <Slider />
+        <DisplayedIcons />
+        <div style={{ margin: 10 }}>
+          <NonReactiveConsumer />
+        </div>
+      </div>
+    </SliderStoreProvider>
+  );
+}
+
+function DisplayedIcons() {
+  const count = useSliderStore((state) => state.count);
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+      {[...Array(count).keys()].map((i) => {
+        return <img key={i} src="/vite.svg" alt="" />;
+      })}
+    </div>
+  );
+}
+
+function Slider() {
+  const step = useSliderStore((state) => state.step);
+  const count = useSliderStore((state) => state.count);
+  const setCount = useSliderStore((state) => state.setCount);
+
+  const renderRef = useRef(0);
+
+  const handleSliderChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = +event.target.value;
+      setCount(value);
+    },
+    [setCount]
   );
 
-  // the type of the selected value is automatically inferred when `options.store` is provided
-  return <h3>The product of X & Y is: {x * y}</h3>;
-}
-
-function ConsumerThatDoesNotReact() {
-  CountersStore.useStore((_state) => null);
-
-  return <p>This component does not re-render despite calling the `useStore` hook</p>;
-}
-
-export default function App() {
   return (
-    // The `Provider` does not take props besides `children`
-    <CountersStore.Provider>
-      {/* Only renders when X changes*/}
-      <CounterInput counterKey="x" />
+    <>
+      <p>Renders: {++renderRef.current}</p>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <input
+          type="range"
+          step={step}
+          min="0"
+          max="50"
+          value={count}
+          onChange={handleSliderChange}
+          style={{ flex: 1 }}
+        />
+        <span>{count}</span>
+      </div>
+    </>
+  );
+}
 
-      {/* Only renders when Y changes*/}
-      <CounterInput counterKey="y" />
+function NonReactiveConsumer() {
+  // If no selector is passed, any change in the store is detected
+  const subscribe = useSliderStoreSubscribe((state) => state.count);
 
-      {/* Only renders when Z changes*/}
-      <CounterInput counterKey="z" />
+  useEffect(() => {
+    // Subscribe to changes and return the unsubscribe callback to clean up on unmount
+    return subscribe((newValue) => console.log('Current Count:', newValue));
+  }, [subscribe]);
 
-      <hr style={{ margin: '20px 0' }} />
+  const getState = useSliderStoreGetState();
 
-      {/* Only renders when X or Y change */}
-      <DisplaySum />
+  const renderRef = useRef(0);
 
-      {/* Does not react to changes in the store */}
-      <ConsumerThatDoesNotReact />
+  return (
+    <div style={{ border: '1px solid red', padding: 10 }}>
+      <p>Renders: {++renderRef.current}</p>
+      <p>This component does NOT re-render, even though it is listening to changes in the store.</p>
+      <p>Check the console when the slider moves to see it logging Current Count</p>
+      <hr style={{ width: '100%' }} />
 
-      <SiblingProviders />
-    </CountersStore.Provider>
+      <span>Click this button to log the current state in the store.</span>
+      <button onClick={() => console.log(getState())}>Log Current State</button>
+    </div>
   );
 }
