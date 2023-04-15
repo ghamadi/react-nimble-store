@@ -119,15 +119,15 @@ function NonReactiveConsumer() {
   // If no selector is passed, any change in the store is detected
   const subscribe = SliderStore.useSubscribe((state) => state.count);
 
+  useEffect(() => {
+    // Subscribe to changes and return the unsubscribe callback to clean up on unmount
+    return subscribe((newValue) => console.log('NEW VALUE', newValue));
+  }, [subscribe]);
+
   // A function that returns the current state in the store
   const getState = SliderStore.useGetState();
 
   const renderRef = useRef(0);
-
-  useEffect(() => {
-    // Subscribe to changes and return the unsubscribe callback to clean up on unmount
-    return subscribe(() => console.log('NEW VALUE', getState().count));
-  }, [subscribe, getState]);
 
   return (
     <div style={{ border: '1px solid red', padding: 10 }}>
