@@ -4,7 +4,7 @@ React Nimble Store is a lightweight and efficient state management library for R
 It provides a simple API to create a store, access and update its state, and subscribe to state changes. It leverages the Context API under the hood, but enhances it with a subscription-based approach to ensure optimal performance and minimal re-rendering.
 
 ## Motivation
-The main drawback when using the Context API is that _all_ consumers re-render when the state of the provider changes. The higher up the component tree the provider is, the higher the performance impact. However, React Context remain a very effective - and very flexible - tool to share state.
+The main drawback when using the Context API is that _all_ consumers re-render when the state of the provider changes. The higher up the component tree the provider is, the higher the performance impact. However, React Context remains a very effective - and very flexible - tool to share state.
 
 This library targets that efficiency drawback in a rather simple, lightweight approach that rotates around the Context API. In essence, a Store is not much more than a supercharged Context, and the API for using it was designed to be as close as possible to that of the Context API.
 
@@ -62,8 +62,7 @@ function Counter() {
 > **Note**
 >
 > As an alternative to the above three selectors, we could use `const {counter, increment, decrement} = useStore()`.
->
-> However, if you are not selecting all the store's properties (like we are here), you should always use the selector argument.
+> However, if you do not need all the store's properties (like we do here), you should _always_ pass a selector argument.
 
 ### Usage with Typescript
 Using Nimble with Typescript is dead simple; just pass a type argument to `createStore`.
@@ -93,19 +92,31 @@ Continuing with the counter example above, imagine you have two (or more) sectio
 ```jsx
 const { Provider, useStore } = createStore(...)
 
-function FruitBasket({fruit}) {
-  const counter = useStore((state) => state.counter);
-
+function App() {
   return (
-    <div>
-      <h2>{fruit} count: {counter}</h2>
-      <div>
-        {[...Array(count).keys()].map((i) => {
-          return <img key={i} src={`/icons/${fruit}`} />;
-        })}
-      </div>
-    </div>
-  );
+    <>
+      <ApplesSection />
+      <OrangesSection />
+    </>
+  )
+}
+
+function ApplesSection(props) {
+  return (
+    <Provider>
+      <h1>This section fills the Apples' Basket</h1>
+      <FruitSection fruit="apples" />
+    </Provider>
+  )
+}
+
+function OrangesSection(props) {
+  return (
+    <Provider>
+      <h1>This section fills the Oranges' Basket</h1>
+      <FruitSection fruit="oranges" />
+    </Provider>
+  )
 }
 
 function FruitSection({fruit}) {
@@ -122,47 +133,28 @@ function FruitSection({fruit}) {
   );
 }
 
-function OrangesSection(props) {
-  return (
-    <Provider>
-      <h1>This section fills the Oranges' Basket</h1>
-      <FruitSection fruit="oranges" />
-    </Provider>
-  )
-}
+function FruitBasket({fruit}) {
+  const counter = useStore((state) => state.counter);
 
-function ApplesSection(props) {
   return (
-    <Provider>
-      <h1>This section fills the Apples' Basket</h1>
-      <FruitSection fruit="apples" />
-    </Provider>
-  )
+    <div>
+      <h2>{fruit} count: {counter}</h2>
+      <div>
+        {[...Array(count).keys()].map((i) => {
+          return <img key={i} src={`/icons/${fruit}`} />;
+        })}
+      </div>
+    </div>
+  );
 }
-
-function App() {
-  return (
-    <>
-      <ApplesSection />
-      <OrangesSection />
-    </>
-  )
-}
-
 ```
 
 ## Using Multiple Stores
-Typically, you may want to separate your state into different stores for better organization.
+Typically, you may want to separate your state into different stores for better organization. This is achievable the same way it is with contexts—by combining providers in a parent-child or sibling relationship.
 
 ```jsx
 const { Provider: CounterProvider, useStore: useCounterStore } = crateStore(...)
-
-const { Provider: ThemeProvider, useStore: useThemeStore } = crateStore((setState, getState) => ({
-  theme: 'light',
-  toggleTheme: () => setState((state) => ({ 
-    theme: state.theme === 'light' ? 'dark' : 'light' 
-  }))
-}))
+const { Provider: ThemeProvider, useStore: useThemeStore } = crateStore(...)
 
 function App() {
   return (
@@ -182,9 +174,8 @@ function App() {
 ```
 
 ## Overriding State
-With a store instance being reusable through multiple providers, it is possible that sometimes you want to nest providers of the same store instance in order to override part of the initial state for a given subtree.
+Sometimes you want to nest providers of the same store instance in order to override part of the initial state for a given subtree. Achieving this is simple using the optional `value` prop of the store's `Provider`.
 
-Achieving this is simple using the optional `value` prop of the store's `Provider`.
 ```jsx
 const themeState = (setState) => ({
   theme: 'light',
@@ -221,8 +212,9 @@ function App() {
 ```
 
 ## Combining Stores
-Stores can be combined by nesting their providers in one global provider (similar to the example above)
+You can establish a "global" store by combining your various stores. This is achieveable in two ways:
 
+1. By creating a global `Provider` without merging stores
 ```jsx
 function GlobalProvider({children}) {
   <ThemeProvider>
@@ -235,7 +227,7 @@ function GlobalProvider({children}) {
 }
 ```
 
-Or, if you prefer to create one global store, you can use slices. However, keep in mind that you need to maintain unique names for properties and actions across the slices. 
+2. If you prefer to create one global store, you can use slices. However, keep in mind that you need to maintain unique names for properties and actions across the slices.
 ```jsx
 const counterSlice = (setState, getState) => ({
   count: 0,
@@ -254,6 +246,7 @@ const GlobalStore = createStore((setState, getState) => ({
   ...themeSlice(setState, getState)
 }))
 ```
+In general, though, it might be a good idea to keep your state decentralized and colocate stores with their semantic owners for most use-cases.
 
 ## Variations of `useStore`
 The `useStore` hook allows you to access part or all of the state in your store, and subscribe to changes in the selected state to trigger a component re-render. 
