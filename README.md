@@ -23,14 +23,12 @@ There are three main steps to utilizing Nimble.
 
 1. Create the store
 ```jsx
-const { Provider, useStore } = createStore((setState, getState) => {
-  return {
+const { Provider, useStore } = createStore((setState, getState) => ({
     counter: 0,
     setCount: (value) => setState({counter: value}),
     increment: () => setState((state) => ({ counter: state.counter + 1 })),
     decrement: () => setState((state) => ({ counter: state.counter - 1 })),
-  };
-});
+}));
 ```
 
 2. Wrap your application or a part of it with the `Provider`
