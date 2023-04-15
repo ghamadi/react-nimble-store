@@ -7,13 +7,22 @@ interface Store {
   setCount: (value: number) => void;
 }
 
-const SliderStore = createStore<Store>((setState) => ({
-  count: 0,
-  step: 1,
-  setCount(value: number) {
-    setState({ count: value });
+const SliderStore = createStore<Store>(
+  (setState) => ({
+    count: 0,
+    step: 1,
+    setCount(value: number) {
+      setState({ count: value });
+    }
+  }),
+  (set, get) => (input) => {
+    console.log('Preparing to change');
+    console.log('Current value:', get());
+    set(input);
+    console.log('State changed');
+    console.log('Current value:', get());
   }
-}));
+);
 
 export default function SiblingProviders() {
   return (

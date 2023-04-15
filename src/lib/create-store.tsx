@@ -13,9 +13,10 @@ type StoreContextValue<T> = {
   subscribe: (callback: () => void) => () => void;
 };
 
-type StateBuilder<T> = (setState: StateSetter<T>) => T;
+type StateBuilder<T> = (setState: StateSetter<T>, getState: () => T) => T;
 type StateSetter<T> = (arg: StateSetterArg<T>) => void;
 type StateSetterArg<T> = ((state: T) => Partial<T>) | Partial<T>;
+type Middleware<T> = (setState: StateSetter<T>, getState: () => T) => StateSetter<T>;
 
 type Selector<T, R> = (state: T) => R;
 type Predicate<T> = (arg1: T, arg2: T) => boolean;
@@ -34,7 +35,10 @@ type ProviderProps<T> = {
  * @param stateBuilder - The callback used to setup the store
  * @returns A `Store` object
  */
-export function createStore<U = never, T extends U = U>(stateBuilder: StateBuilder<T>) {
+export function createStore<U = never, T extends U = U>(
+  stateBuilder: StateBuilder<T>,
+  middleware?: Middleware<T>
+) {
   const Context = createContext<StoreContextValue<T> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
 
@@ -49,7 +53,7 @@ export function createStore<U = never, T extends U = U>(stateBuilder: StateBuild
     }, []);
 
     // The callback used by `actions` to trigger a state change
-    const setState: StateSetter<T> = useCallback((input) => {
+    const baseSetState: StateSetter<T> = useCallback((input) => {
       switch (typeof input) {
         case 'function':
           stateRef.current = { ...stateRef.current, ...input(stateRef.current) };
@@ -63,7 +67,16 @@ export function createStore<U = never, T extends U = U>(stateBuilder: StateBuild
       subscribers.forEach((callback) => callback());
     }, []);
 
-    const initialState = (props.value ?? stateBuilder)(setState);
+    // The final state setter
+    const setState: StateSetter<T> = useCallback(
+      (input) => {
+        const finalSetState = middleware ? middleware(baseSetState, getState) : baseSetState;
+        return finalSetState(input);
+      },
+      [baseSetState, getState]
+    );
+
+    const initialState = (props.value ?? stateBuilder)(setState, getState);
     const stateRef = useRef(initialState);
     const contextValue: StoreContextValue<T> = { getState, subscribe };
 
