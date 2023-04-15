@@ -8,20 +8,20 @@ import {
   useEffect
 } from 'react';
 
-type StoreContextValue<T> = {
+export type StoreContextValue<T> = {
   getState: () => T;
   subscribe: (callback: () => void) => () => void;
 };
 
-type StateBuilder<T> = (setState: StateSetter<T>, getState: () => T) => T;
-type StateSetter<T> = (arg: StateSetterArg<T>) => void;
-type StateSetterArg<T> = ((state: T) => Partial<T>) | Partial<T>;
-type Middleware<T> = (setState: StateSetter<T>, getState: () => T) => StateSetter<T>;
+export type StateBuilder<T> = (setState: StateSetter<T>, getState: () => T) => T;
+export type StateSetter<T> = (arg: StateSetterArg<T>) => void;
+export type StateSetterArg<T> = ((state: T) => Partial<T>) | Partial<T>;
+export type Middleware<T> = (setState: StateSetter<T>, getState: () => T) => StateSetter<T>;
 
-type Selector<T, R> = (state: T) => R;
-type Predicate<T> = (arg1: T, arg2: T) => boolean;
+export type Selector<T, R> = (state: T) => R;
+export type Predicate<T> = (arg1: T, arg2: T) => boolean;
 
-type ProviderProps<T> = {
+export type ProviderProps<T> = {
   children: ReactNode;
   value?: StateBuilder<T>;
 };
@@ -185,4 +185,11 @@ export function createStore<U = never, T extends U = U>(
   }
 
   return { Provider, useStore, useGetState, useSubscribe };
+}
+
+export function compose<T>(...fns: Array<Middleware<T>>): Middleware<T> {
+  return (setState, getState) => {
+    const chain = fns.map((middleware) => middleware(setState, getState));
+    return (input) => chain.forEach((stateSetter) => stateSetter(input));
+  };
 }
