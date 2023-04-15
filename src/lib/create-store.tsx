@@ -109,17 +109,25 @@ export function createStore<U = never, T extends U = U>(stateBuilder: StateBuild
     selectionRef.current = selectorFn(getState());
 
     return useCallback(
-      (cb: () => void) => {
+      (cb: (val: R) => void) => {
         return subscribe(() => {
           const newValue = selectorFn(getState());
           if (!predicateFn(newValue, selectionRef.current as R)) {
             selectionRef.current = newValue;
-            cb();
+            cb(newValue);
           }
         });
       },
       [getState, predicateFn, selectorFn, subscribe]
     );
+  }
+
+  /**
+   * @returns a function to read the store's current state without subscribing to changes in the store
+   */
+  function useGetState() {
+    const contextValue = useValidContext('useGetState');
+    return contextValue.getState;
   }
 
   /**
@@ -148,14 +156,6 @@ export function createStore<U = never, T extends U = U>(stateBuilder: StateBuild
     );
 
     return predicateFn;
-  }
-
-  /**
-   * @returns a function to read the store's current state without subscribing to changes in the store
-   */
-  function useGetState() {
-    const contextValue = useValidContext('useGetState');
-    return contextValue.getState;
   }
 
   /**
