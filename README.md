@@ -63,7 +63,7 @@ function Counter() {
 >
 > As an alternative to the above three selectors, we could use `const {counter, increment, decrement} = useStore()`.
 >
-> However, if you are not selecting all the store's properties (like we are here), it is usually better to use `useStore` with a selector callback.
+> However, if you are not selecting all the store's properties (like we are here), you should always use the selector argument.
 
 ### Usage with Typescript
 Using Nimble with Typescript is dead simple; just pass a type argument to `createStore`.
