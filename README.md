@@ -4,9 +4,9 @@ React Nimble Store is a lightweight and efficient state management library for R
 It provides a simple API to create a store, access and update its state, and subscribe to state changes. It leverages the Context API under the hood, but enhances it with a subscription-based approach to ensure optimal performance and minimal re-rendering.
 
 ## Motivation
-The main drawback when using the Context API is that _all_ consumers re-render when the state of the provider changes. The higher up the component tree the provider is, the higher the performance impact. However, Contexts remain very effective - and very flexible - tools to share state.
+The main drawback when using the Context API is that _all_ consumers re-render when the state of the provider changes. The higher up the component tree the provider is, the higher the performance impact. However, React Context remain a very effective - and very flexible - tool to share state.
 
-This library targets the efficiency drawback in a rather simple, lightweight approach that rotates around the Context API. In essence, a Store is not much more than a supercharged Context, and the API for using it was designed to be as close as possible to that of the Context API.
+This library targets that efficiency drawback in a rather simple, lightweight approach that rotates around the Context API. In essence, a Store is not much more than a supercharged Context, and the API for using it was designed to be as close as possible to that of the Context API.
 
 ## Features
 - Simple API for creating a store and accessing its state
@@ -42,7 +42,7 @@ function CounterWrapper() {
 }
 ```
 
-3. Consume the store from any component within any child of `Provider`
+3. Consume the store from any child of `Provider`
 ```jsx
 function Counter() {
   const counter = useStore((state) => state.counter);
