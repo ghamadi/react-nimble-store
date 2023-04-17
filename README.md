@@ -95,27 +95,16 @@ const { Provider, useStore } = createStore(...)
 function App() {
   return (
     <>
-      <ApplesSection />
-      <OrangesSection />
+      <Provider>
+        <h1>This section fills the Apples Basket</h1>
+        <FruitSection fruit="apples" />
+      </Provider>
+
+      <Provider>
+        <h1>This section fills the Oranges Basket</h1>
+        <FruitSection fruit="oranges" />
+      </Provider>
     </>
-  )
-}
-
-function ApplesSection(props) {
-  return (
-    <Provider>
-      <h1>This section fills the Apples' Basket</h1>
-      <FruitSection fruit="apples" />
-    </Provider>
-  )
-}
-
-function OrangesSection(props) {
-  return (
-    <Provider>
-      <h1>This section fills the Oranges' Basket</h1>
-      <FruitSection fruit="oranges" />
-    </Provider>
   )
 }
 
