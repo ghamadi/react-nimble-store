@@ -253,10 +253,8 @@ const selection = useStore(state => state.someProperty)
 ```
 
 ```jsx
-import isEqual from 'lodash.isequal';
-
 // Uses the `predicate` argument to decide when to react to a change
-const selection = useStore(state => ({  p1: state.p1,  p2: state.p2 }, isEqual))
+const selection = useStore(state => ({  p1: state.p1,  p2: state.p2 }, shallowEqual))
 ```
 
 The `predicate` argument is any function that takes two arguments and returns a boolean. Generally, you would use this argument to perform a custom comparison between the previous selection and the new one. However, keep in mind that you do not need to use it strictly for an equality check.
