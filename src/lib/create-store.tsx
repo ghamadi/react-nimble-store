@@ -1,27 +1,28 @@
 import {
   createContext,
-  ReactNode,
+  type ReactNode,
   useRef,
   useCallback,
   useContext,
   useState,
-  useEffect
+  useEffect,
+  useMemo
 } from 'react';
 
-export type StoreContextValue<T> = {
+type StoreContextValue<T> = {
   getState: () => T;
   subscribe: (callback: () => void) => () => void;
 };
 
+type StateSetterArg<T> = ((state: T) => Partial<T>) | Partial<T>;
+type Selector<T, R> = (state: T) => R;
+type Predicate<T> = (arg1: T, arg2: T) => boolean;
+
 export type StateBuilder<T> = (setState: StateSetter<T>, getState: () => T) => T;
 export type StateSetter<T> = (arg: StateSetterArg<T>) => void;
-export type StateSetterArg<T> = ((state: T) => Partial<T>) | Partial<T>;
 export type Middleware<T> = (setState: StateSetter<T>, getState: () => T) => StateSetter<T>;
 
-export type Selector<T, R> = (state: T) => R;
-export type Predicate<T> = (arg1: T, arg2: T) => boolean;
-
-export type ProviderProps<T> = {
+type ProviderProps<T> = {
   children: ReactNode;
   value?: StateBuilder<T>;
 };
@@ -42,7 +43,7 @@ export function createStore<U = never, T extends U = U>(
   const Context = createContext<StoreContextValue<T> | undefined>(undefined);
   const subscribers = new Set<() => void>([]);
 
-  function Provider(props: ProviderProps<T>) {
+  const Provider = (props: ProviderProps<T>) => {
     // Returns the current version of the state
     const getState = useCallback(() => stateRef.current, []);
 
@@ -76,12 +77,25 @@ export function createStore<U = never, T extends U = U>(
       [baseSetState, getState]
     );
 
-    const initialState = (props.value ?? stateBuilder)(setState, getState);
-    const stateRef = useRef(initialState);
-    const contextValue: StoreContextValue<T> = { getState, subscribe };
+    const { value } = props;
+
+    const state: T = useMemo<T>(() => {
+      return (value ?? stateBuilder)(setState, getState);
+    }, [value, setState, getState]);
+
+    const stateRef = useRef(state);
+    // Reinitialize stateRef iff the initial state changes
+    useEffect(() => {
+      stateRef.current = state;
+    }, [state]);
+
+    const contextValue: StoreContextValue<T> = useMemo(
+      () => ({ getState, subscribe }),
+      [getState, subscribe]
+    );
 
     return <Context.Provider value={contextValue}>{props.children}</Context.Provider>;
-  }
+  };
 
   /**
    * Hook to return any value from the store's `state` object. The output can be any data of any type.
@@ -90,7 +104,7 @@ export function createStore<U = never, T extends U = U>(
    * @param predicate - An equality checker callback to provider custom comparison logic when "===" is not enough
    * @returns data from the `state` of the closest parent provider
    */
-  function useStore<R>(selector?: Selector<T, R>, predicate?: Predicate<R>) {
+  function useStore<R = T>(selector?: Selector<T, R>, predicate?: Predicate<R>) {
     const contextValue = useValidContext('useStore');
 
     const predicateFn = usePredicate(predicate);
